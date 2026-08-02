@@ -1,0 +1,27 @@
+# Accepted hierarchical topic taxonomy (max depth 3).
+# Writer agents may PROPOSE new nodes; they are merged here only when a draft is accepted.
+topics:
+- slug: ai
+  name: Artificial Intelligence
+  children:
+  - slug: llm
+    name: Large Language Models
+    children:
+    - slug: reasoning
+      name: Reasoning
+    - slug: agents
+      name: Agents
+    - slug: rag
+      name: Retrieval-Augmented Generation
+    - slug: training
+      name: Training & Fine-tuning
+    - slug: evaluation
+      name: Evaluation & Benchmarks
+  - slug: multimodal
+    name: Multimodal Models
+  - slug: safety
+    name: Safety & Alignment
+- slug: tooling
+  name: Developer Tooling
+- slug: industry-news
+  name: Industry News

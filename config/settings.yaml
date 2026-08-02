@@ -1,0 +1,22 @@
+# Pipeline settings.
+# Model names are raw provider strings (see `codex` account's available models),
+# or the tiers FAST / STRONGEST (caw's built-in tier map may lag the account).
+models:
+  extractor: gpt-5.6-luna    # fast & cheap: LinkedIn text extraction
+  triage: gpt-5.6-luna       # fast & cheap: paper/news/skip classification
+  writer: gpt-5.6-sol        # frontier: blog writing
+
+provider: codex          # caw provider (codex uses the Codex subscription via ~/.codex/auth.json)
+
+limits:
+  items_per_run: 10          # max items sent to the writer per run
+  triage_batch_size: 20      # max posts per triage agent call
+  paper_text_chars: 60000    # cap for paper.txt handed to the writer
+  news_text_chars: 20000     # cap for fetched news page text
+
+topics:
+  max_depth: 3
+
+blog:
+  base_url: http://localhost:8080/
+  title: InsightPulse

@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+data/*
+!data/.gitkeep
+blog/site/public/
+blog/site/resources/
+.env
+blog/site/.hugo_build.lock

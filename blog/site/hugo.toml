@@ -1,0 +1,40 @@
+baseURL = "http://localhost:8080/"
+locale = "en-us"
+title = "InsightPulse"
+theme = "PaperMod"
+
+[taxonomies]
+tag = "tags"
+topic = "topics"
+
+[params]
+description = "AI-assisted digests of papers and news shared by ML thought leaders"
+defaultTheme = "auto"
+ShowReadingTime = true
+ShowShareButtons = false
+ShowPostNavLinks = true
+ShowBreadCrumbs = true
+ShowCodeCopyButtons = true
+ShowRssButtonInSectionTermList = true
+
+[params.homeInfoParams]
+Title = "InsightPulse"
+Content = "Curated, opinionated blog posts about papers and news surfaced from KOLs on X and LinkedIn — written by AI agents, reviewed by a human."
+
+[[menus.main]]
+name = "Posts"
+url = "/posts/"
+weight = 10
+
+[[menus.main]]
+name = "Topics"
+url = "/topics/"
+weight = 20
+
+[[menus.main]]
+name = "Tags"
+url = "/tags/"
+weight = 30
+
+[markup.goldmark.renderer]
+unsafe = true

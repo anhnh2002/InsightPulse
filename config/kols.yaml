@@ -1,0 +1,11 @@
+# KOL list — add/remove entries freely; the pipeline picks this up on the next run.
+x:
+  - handle: tom_doerr
+    max_posts: 20
+
+linkedin:
+  - kind: person        # fetched via get_person_profile(sections="posts")
+    id: omarsar
+    max_scrolls: 10
+  - kind: company       # fetched via get_company_posts
+    id: dair-ai
