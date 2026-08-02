@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from insightpulse.models import Kind, RawPost, Source
 from insightpulse.paths import STATE_DB
@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS items (
     error       TEXT DEFAULT '',
     links_json  TEXT DEFAULT '[]',
     title       TEXT DEFAULT '',
-    post_text   TEXT DEFAULT ''
+    post_text   TEXT DEFAULT '',
+    posted_at   TEXT DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_items_status ON items(status);
 CREATE INDEX IF NOT EXISTS idx_items_arxiv ON items(arxiv_id) WHERE arxiv_id != '';
@@ -35,17 +36,29 @@ CREATE TABLE IF NOT EXISTS runs (
     run_id      TEXT PRIMARY KEY,
     started_at  TEXT NOT NULL,
     finished_at TEXT DEFAULT '',
-    counts_json TEXT DEFAULT '{}'
+    counts_json TEXT DEFAULT '{}',
+    target_date TEXT DEFAULT ''
 );
 """
+
+# Additive migrations for DBs created before these columns existed
+# (CREATE TABLE IF NOT EXISTS never alters an existing table).
+_MIGRATIONS = [
+    ("items", "posted_at", "ALTER TABLE items ADD COLUMN posted_at TEXT DEFAULT ''"),
+    ("runs", "target_date", "ALTER TABLE runs ADD COLUMN target_date TEXT DEFAULT ''"),
+]
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def new_run_id() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+def new_run_id(target: date | None = None) -> str:
+    """Run id prefixed with the covered day; random suffix keeps backfill
+    runs started within the same second from colliding."""
+    day = (target or datetime.now(timezone.utc).date()).strftime("%Y%m%d")
+    now = datetime.now(timezone.utc).strftime("%H%M%S")
+    return f"{day}-{now}-{uuid.uuid4().hex[:4]}"
 
 
 def new_item_id() -> str:
@@ -58,6 +71,14 @@ class State:
         self.conn = sqlite3.connect(db_path)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA)
+        self._migrate()
+
+    def _migrate(self) -> None:
+        for table, col, ddl in _MIGRATIONS:
+            cols = {r[1] for r in self.conn.execute(f"PRAGMA table_info({table})")}
+            if col not in cols:
+                self.conn.execute(ddl)
+        self.conn.commit()
 
     def close(self) -> None:
         self.conn.close()
@@ -70,9 +91,10 @@ class State:
 
     # --- runs ---
 
-    def start_run(self, run_id: str) -> None:
+    def start_run(self, run_id: str, target_date: str = "") -> None:
         self.conn.execute(
-            "INSERT INTO runs (run_id, started_at) VALUES (?, ?)", (run_id, _now())
+            "INSERT INTO runs (run_id, started_at, target_date) VALUES (?, ?, ?)",
+            (run_id, _now(), target_date),
         )
         self.conn.commit()
 
@@ -91,8 +113,8 @@ class State:
         try:
             self.conn.execute(
                 "INSERT INTO items (id, source, kol, external_id, url, dedup_key,"
-                " status, run_id, created_at, links_json, post_text)"
-                " VALUES (?, ?, ?, ?, ?, ?, 'collected', ?, ?, ?, ?)",
+                " status, run_id, created_at, links_json, post_text, posted_at)"
+                " VALUES (?, ?, ?, ?, ?, ?, 'collected', ?, ?, ?, ?, ?)",
                 (
                     item_id,
                     post.source.value,
@@ -104,6 +126,7 @@ class State:
                     _now(),
                     json.dumps(post.urls),
                     post.text,
+                    post.created_at,
                 ),
             )
         except sqlite3.IntegrityError:

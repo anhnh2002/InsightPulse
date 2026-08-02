@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from datetime import date, timedelta
 
 import typer
 from rich.console import Console
@@ -21,19 +22,89 @@ def _init(verbose: bool = typer.Option(False, "--verbose", "-v")):
     setup_logging(verbose)
 
 
+def _parse_day_opt(value: str, opt: str) -> date:
+    from insightpulse.dates import parse_day
+
+    try:
+        return parse_day(value)
+    except ValueError:
+        raise typer.BadParameter(f"{opt} must be YYYY-MM-DD") from None
+
+
 @app.command()
 def run(
     source: str = typer.Option("all", help="all | x | linkedin"),
     limit: int = typer.Option(None, help="max items sent to the writer this run"),
     dry_run: bool = typer.Option(False, help="collect + dedup only, no agents"),
+    date: str = typer.Option(None, "--date",
+                             help="target day YYYY-MM-DD (UTC); default: yesterday"),
 ):
-    """Run one pipeline pass: crawl → triage → enrich → write → queue."""
+    """Run one pipeline pass over a single day: crawl → triage → enrich → write → queue."""
     from insightpulse.pipeline import run_pipeline
 
     if source not in ("all", "x", "linkedin"):
         raise typer.BadParameter("source must be all | x | linkedin")
-    counts = run_pipeline(source=source, limit=limit, dry_run=dry_run)
+    target = _parse_day_opt(date, "--date") if date else None
+    counts = run_pipeline(source=source, limit=limit, dry_run=dry_run, target_date=target)
     console.print(f"[bold]Run finished:[/bold] {counts}")
+
+
+@app.command()
+def backfill(
+    from_date: str = typer.Option(None, "--from", help="first day YYYY-MM-DD"),
+    to_date: str = typer.Option(None, "--to",
+                                help="last day YYYY-MM-DD (inclusive); default: yesterday"),
+    days: int = typer.Option(None, "--days", help="backfill the last N complete days"),
+    source: str = typer.Option("all", help="all | x | linkedin"),
+    limit: int = typer.Option(None, help="max items sent to the writer per day"),
+    dry_run: bool = typer.Option(False, help="collect + dedup only, no agents"),
+):
+    """Run the pipeline once per past day, oldest first."""
+    from insightpulse.dates import yesterday_utc
+    from insightpulse.pipeline import run_pipeline
+
+    if source not in ("all", "x", "linkedin"):
+        raise typer.BadParameter("source must be all | x | linkedin")
+    if (from_date is None) == (days is None):
+        raise typer.BadParameter("pass exactly one of --from or --days")
+    if days is not None and to_date is not None:
+        raise typer.BadParameter("--to only combines with --from")
+
+    end = _parse_day_opt(to_date, "--to") if to_date else yesterday_utc()
+    if days is not None:
+        if days < 1:
+            raise typer.BadParameter("--days must be >= 1")
+        start = end - timedelta(days=days - 1)
+    else:
+        start = _parse_day_opt(from_date, "--from")
+    if start > end:
+        raise typer.BadParameter(f"--from {start} is after {end}")
+    if end > yesterday_utc():
+        raise typer.BadParameter("--to cannot be later than yesterday (complete days only)")
+
+    results: list[tuple[date, str]] = []
+    failed = False
+    day = start
+    while day <= end:
+        console.print(f"[bold]Backfilling {day}…[/bold]")
+        try:
+            counts = run_pipeline(source=source, limit=limit, dry_run=dry_run,
+                                  target_date=day)
+            results.append((day, str(counts)))
+        except Exception as e:
+            failed = True
+            results.append((day, f"FAILED: {e}"))
+            console.print(f"[red]{day} failed:[/red] {e}")
+        day += timedelta(days=1)
+
+    table = Table(title=f"Backfill {start} → {end}")
+    table.add_column("day")
+    table.add_column("result")
+    for d, r in results:
+        table.add_row(str(d), r)
+    console.print(table)
+    if failed:
+        raise typer.Exit(1)
 
 
 @app.command("list")

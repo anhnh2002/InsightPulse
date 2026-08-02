@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -15,6 +16,7 @@ from insightpulse.agents.linkedin_extractor import extract_posts
 from insightpulse.agents.triage import arxiv_id_from_url, triage_posts
 from insightpulse.agents.writer import write_blog
 from insightpulse.config import load_kols, load_settings
+from insightpulse.dates import parse_post_date, yesterday_utc
 from insightpulse.enrich import arxiv as arxiv_enrich
 from insightpulse.enrich import github as github_enrich
 from insightpulse.models import Kind, RawPost, Source, TriageResult
@@ -76,11 +78,11 @@ def _resolve_short_links(urls: list[str]) -> list[str]:
     return resolved
 
 
-def collect_x(state: State, run_id: str) -> list[tuple[str, RawPost]]:
+def collect_x(state: State, run_id: str, target_date: date) -> list[tuple[str, RawPost]]:
     new_items = []
     for kol in load_kols().x:
         try:
-            posts = x_source.fetch_user_posts(kol.handle, kol.max_posts)
+            posts = x_source.fetch_user_posts_for_day(kol.handle, target_date, kol.max_posts)
         except Exception as e:
             log.error("X collect failed for @%s: %s", kol.handle, e)
             continue
@@ -91,8 +93,17 @@ def collect_x(state: State, run_id: str) -> list[tuple[str, RawPost]]:
     return new_items
 
 
-def collect_linkedin(state: State, run_id: str, run_dir: Path) -> list[tuple[str, RawPost]]:
+def collect_linkedin(state: State, run_id: str, run_dir: Path,
+                     target_date: date) -> list[tuple[str, RawPost]]:
     new_items = []
+    now = datetime.now(timezone.utc)
+    age_days = (now.date() - target_date).days
+    if age_days > 7:
+        # LinkedIn only shows relative ages; beyond ~a week the granularity is
+        # weeks/months, so bucketing posts into a specific day is meaningless.
+        log.warning("LinkedIn: target day %s is %d days old — relative dates too "
+                    "coarse, skipping LinkedIn", target_date, age_days)
+        return new_items
     for kol in load_kols().linkedin:
         try:
             raw = linkedin_source.fetch_kol_raw(kol)
@@ -110,10 +121,23 @@ def collect_linkedin(state: State, run_id: str, run_dir: Path) -> list[tuple[str
         except Exception as e:
             log.error("LinkedIn extraction failed for %s: %s", kol.id, e)
             continue
+        in_window, new = 0, 0
         for p in posts:
+            est = parse_post_date(p.created_at, now)
+            if est is not None:
+                p.created_at = est.isoformat()
+                if est != target_date:
+                    continue
+            elif age_days > 1:
+                # unknown date: only trust it as "fresh" on a current-day run
+                continue
+            in_window += 1
             item_id = state.insert_post(p, run_id)
             if item_id:
+                new += 1
                 new_items.append((item_id, p))
+        log.info("LinkedIn %s: %d posts extracted, %d within %s, %d new",
+                 kol.id, len(posts), in_window, target_date, new)
     return new_items
 
 
@@ -158,7 +182,7 @@ def triage_new(state: State, new_items: list[tuple[str, RawPost]],
 
 
 def process_item(state: State, item_id: str, post: RawPost, tri: TriageResult,
-                 run_id: str, run_dir: Path) -> None:
+                 run_id: str, run_dir: Path, target_date: date) -> None:
     """Enrich one triaged item and run the writer agent on it."""
     settings = load_settings()
     workdir = run_dir / "items" / item_id
@@ -210,6 +234,8 @@ def process_item(state: State, item_id: str, post: RawPost, tri: TriageResult,
     (workdir / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False))
     state.set_status(item_id, "enriched")
 
+    # date the draft by the post's own day; leftovers from earlier runs keep theirs
+    draft_date = parse_post_date(post.created_at, datetime.now(timezone.utc)) or target_date
     draft = write_blog(
         item_id=item_id,
         kind=kind,
@@ -221,6 +247,7 @@ def process_item(state: State, item_id: str, post: RawPost, tri: TriageResult,
         run_id=run_id,
         paper=paper_meta,
         repo=repo_meta,
+        date_str=draft_date.isoformat(),
     )
     review_queue.write_draft(draft)
     state.set_status(item_id, "drafted")
@@ -233,6 +260,7 @@ def _row_to_post(row) -> RawPost:
         external_id=row["external_id"],
         text=row["post_text"],
         urls=json.loads(row["links_json"]),
+        created_at=row["posted_at"],
         permalink=row["url"],
     )
 
@@ -269,26 +297,27 @@ def _leftover_items(state: State, exclude_ids: set[str]) -> list[tuple[str, RawP
 
 
 def run_pipeline(source: str = "all", limit: int | None = None,
-                 dry_run: bool = False) -> dict:
-    """Execute one full pipeline pass. Returns counts."""
+                 dry_run: bool = False, target_date: date | None = None) -> dict:
+    """Execute one pipeline pass covering a single UTC day. Returns counts."""
     ensure_dirs()
     settings = load_settings()
     limit = limit if limit is not None else settings.limits.items_per_run
+    target_date = target_date or yesterday_utc()
     _acquire_lock()
-    run_id = new_run_id()
+    run_id = new_run_id(target_date)
     run_dir = RUNS_DIR / run_id
     counts = {"collected": 0, "triaged": 0, "drafted": 0, "failed": 0}
     try:
         with State() as state:
-            state.start_run(run_id)
+            state.start_run(run_id, target_date.isoformat())
 
             new_items: list[tuple[str, RawPost]] = []
             if source in ("all", "x"):
-                new_items += collect_x(state, run_id)
+                new_items += collect_x(state, run_id, target_date)
             if source in ("all", "linkedin"):
-                new_items += collect_linkedin(state, run_id, run_dir)
+                new_items += collect_linkedin(state, run_id, run_dir, target_date)
             counts["collected"] = len(new_items)
-            log.info("run %s: %d new posts", run_id, len(new_items))
+            log.info("run %s (day %s): %d new posts", run_id, target_date, len(new_items))
 
             if dry_run:
                 state.finish_run(run_id, counts)
@@ -306,7 +335,7 @@ def run_pipeline(source: str = "all", limit: int | None = None,
 
             for item_id, post, tri in work[:limit]:
                 try:
-                    process_item(state, item_id, post, tri, run_id, run_dir)
+                    process_item(state, item_id, post, tri, run_id, run_dir, target_date)
                     counts["drafted"] += 1
                 except Exception as e:
                     log.exception("item %s failed", item_id)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 
 from caw import ToolKit, tool
@@ -58,6 +59,7 @@ def extract_posts(kol_id: str, raw: dict, output_dir: Path) -> list[RawPost]:
         name="LinkedIn Post Extractor",
         system_prompt=load_prompt("linkedin_extractor.md"),
         user_prompt=(
+            f"Captured at (UTC): {datetime.now(timezone.utc).date().isoformat()}.\n\n"
             f"Raw innerText captured from the LinkedIn page of '{kol_id}':\n\n{text}"
         ),
         model=load_settings().models.extractor,

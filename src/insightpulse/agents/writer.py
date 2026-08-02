@@ -118,6 +118,7 @@ def write_blog(
     run_id: str,
     paper: PaperMeta | None = None,
     repo: RepoMeta | None = None,
+    date_str: str = "",
 ) -> Draft:
     """Run the writer agent for one enriched item; returns the validated Draft."""
     toolkit = BlogToolKit(kind)
@@ -151,7 +152,7 @@ def write_blog(
         kol=kol,
         source_url=source_url,
         run_id=run_id,
-        date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        date=date_str or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         paper=paper,
         repo=repo,
         **d,

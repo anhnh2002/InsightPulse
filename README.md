@@ -27,9 +27,13 @@ docker compose up -d web        # blog at http://localhost:8080
 ## Usage
 
 ```bash
-uv run insightpulse run                     # one full pass (all sources)
+uv run insightpulse run                     # one pass over yesterday (UTC), all sources
+uv run insightpulse run --date 2026-07-30   # a specific day
 uv run insightpulse run --source x --limit 3
 uv run insightpulse run --dry-run           # collect + dedup only, no agents
+
+uv run insightpulse backfill --days 7                        # last 7 complete days
+uv run insightpulse backfill --from 2026-07-20 --to 2026-07-25
 
 uv run insightpulse list                    # pending drafts
 uv run insightpulse show <id>               # print a draft
@@ -52,11 +56,13 @@ Drafts are plain markdown files in `data/queue/pending/` — you can also edit t
 
 ## Scheduling (cron)
 
-The pipeline is a single idempotent pass (dedup is cross-run), so cron is enough:
+Each run covers exactly one UTC day of posts — by default **yesterday**, so a daily cron always processes a complete day:
 
 ```cron
 0 8 * * * cd ~/InsightPulse && uv run insightpulse run >> data/cron.log 2>&1
 ```
+
+Runs are idempotent: the day window plus cross-run dedup means re-running a day collects nothing new and only retries previously failed items. If cron missed some days, catch up with `insightpulse backfill --days N` (or `--from`/`--to`) — it runs the pipeline once per day, oldest first. X backfill works for any past day (date-scoped search); LinkedIn only exposes relative post ages ("3d", "2 tuần"), so days older than ~a week are automatically skipped for LinkedIn.
 
 A `.run.lock` in `data/` prevents overlapping runs (LinkedIn's browser profile only tolerates one process anyway).
 

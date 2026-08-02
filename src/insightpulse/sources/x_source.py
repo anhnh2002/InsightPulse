@@ -12,10 +12,12 @@ import json
 import logging
 import os
 import subprocess
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
 
+from insightpulse.dates import in_day, iso_to_date
 from insightpulse.models import RawPost, Source
 
 log = logging.getLogger(__name__)
@@ -46,10 +48,7 @@ def _auth_env() -> dict[str, str]:
     return env
 
 
-def fetch_user_posts(handle: str, max_posts: int = 20) -> list[RawPost]:
-    """Fetch recent posts for one X handle (without @)."""
-    cmd = ["twitter", "user-posts", handle, "-n", str(max_posts), "--json"]
-    log.info("X: fetching %d posts from @%s", max_posts, handle)
+def _run_twitter(cmd: list[str], handle: str) -> list:
     proc = subprocess.run(
         cmd, env=_auth_env(), capture_output=True, text=True, timeout=300
     )
@@ -65,7 +64,10 @@ def fetch_user_posts(handle: str, max_posts: int = 20) -> list[RawPost]:
     tweets = json.loads(proc.stdout)
     if isinstance(tweets, dict):  # some versions wrap the list
         tweets = tweets.get("tweets") or tweets.get("data") or []
+    return tweets
 
+
+def _parse_tweets(handle: str, tweets: list) -> list[RawPost]:
     posts: list[RawPost] = []
     for t in tweets:
         text = t.get("text", "")
@@ -88,5 +90,65 @@ def fetch_user_posts(handle: str, max_posts: int = 20) -> list[RawPost]:
                 permalink=f"https://x.com/{handle}/status/{t.get('id', '')}",
             )
         )
+    return posts
+
+
+def fetch_user_posts(handle: str, max_posts: int = 20) -> list[RawPost]:
+    """Fetch recent posts for one X handle (without @)."""
+    cmd = ["twitter", "user-posts", handle, "-n", str(max_posts), "--json"]
+    log.info("X: fetching %d posts from @%s", max_posts, handle)
+    posts = _parse_tweets(handle, _run_twitter(cmd, handle))
     log.info("X: got %d posts from @%s", len(posts), handle)
     return posts
+
+
+def fetch_user_posts_for_day(handle: str, day: date, max_posts: int = 20) -> list[RawPost]:
+    """Fetch one handle's posts within a single UTC day.
+
+    Tries date-scoped `twitter search --from` first. That endpoint is broken on
+    some accounts (ClientTransaction init fails → every search 404s), so on
+    failure it falls back to `user-posts` with a window deepened by the target
+    day's age — which only reaches as far back as the newest-N posts.
+    The day is always enforced client-side on createdAtISO (search date
+    windows are fuzzy at the edges and --until inclusivity is undocumented).
+    """
+    log.info("X: fetching posts from @%s for %s", handle, day)
+    try:
+        cmd = [
+            "twitter", "search",
+            "--from", handle,
+            "--since", day.isoformat(),
+            "--until", (day + timedelta(days=1)).isoformat(),
+            "-t", "latest",
+            "-n", str(max_posts), "--json",
+        ]
+        posts = _parse_tweets(handle, _run_twitter(cmd, handle))
+    except XAuthError:
+        raise
+    except Exception as e:
+        log.warning("X: date-scoped search failed for @%s (%s) — falling back to"
+                    " user-posts + client-side filter", handle, str(e)[:200])
+        age_days = max((datetime.now(timezone.utc).date() - day).days, 0)
+        n = min(max_posts + 20 * age_days, 200)
+        posts = _parse_tweets(
+            handle, _run_twitter(["twitter", "user-posts", handle, "-n", str(n), "--json"], handle)
+        )
+        if n < 200 and posts and not any(in_day(p.created_at, day) for p in posts):
+            oldest = min((d for d in (iso_to_date(p.created_at) for p in posts) if d),
+                         default=None)
+            if oldest and oldest > day:
+                log.info("X: @%s window of %d posts didn't reach %s — retrying at 200",
+                         handle, n, day)
+                posts = _parse_tweets(
+                    handle,
+                    _run_twitter(["twitter", "user-posts", handle, "-n", "200", "--json"], handle),
+                )
+    kept = [p for p in posts if in_day(p.created_at, day)]
+    if posts and not kept:
+        oldest = min((d for d in (iso_to_date(p.created_at) for p in posts) if d),
+                     default=None)
+        if oldest and oldest > day:
+            log.warning("X: @%s fetched window (%d posts) only reaches back to %s — "
+                        "posts from %s may be missed", handle, len(posts), oldest, day)
+    log.info("X: got %d posts from @%s (%d within %s)", len(posts), handle, len(kept), day)
+    return kept
