@@ -43,17 +43,11 @@ class TopicSettings(BaseModel):
     max_depth: int = 3
 
 
-class BlogSettings(BaseModel):
-    base_url: str = "http://localhost:8080/"
-    title: str = "InsightPulse"
-
-
 class Settings(BaseModel):
     models: Models = Field(default_factory=Models)
     provider: str = "codex"
     limits: Limits = Field(default_factory=Limits)
     topics: TopicSettings = Field(default_factory=TopicSettings)
-    blog: BlogSettings = Field(default_factory=BlogSettings)
 
 
 def _load_yaml(name: str) -> dict:

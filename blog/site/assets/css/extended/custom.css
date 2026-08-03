@@ -1,0 +1,85 @@
+/* InsightPulse custom styles: source-post card, pull-quotes, tables, figures, mermaid */
+
+/* Source-post quote card */
+.post-content blockquote.source-post {
+    margin: 1.5rem 0;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--border);
+    border-inline-start: 4px solid var(--primary);
+    border-radius: 8px;
+    background: var(--code-bg);
+    font-style: normal;
+}
+
+.post-content blockquote.source-post p {
+    margin: 0 0 0.5rem;
+    font-size: 0.95rem;
+    white-space: pre-line;
+}
+
+.post-content blockquote.source-post footer {
+    font-size: 0.85rem;
+    color: var(--secondary);
+}
+
+.post-content blockquote.source-post footer a {
+    color: var(--primary);
+    box-shadow: none;
+}
+
+.source-post-date {
+    color: var(--secondary);
+}
+
+/* Pull-quotes: plain blockquotes get an accent treatment */
+.post-content blockquote:not(.source-post) {
+    border-inline-start: 3px solid var(--primary);
+    font-size: 1.1rem;
+    font-style: italic;
+    color: var(--content);
+}
+
+/* Tables: striped rows, horizontal scroll on overflow */
+.post-content table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+}
+
+.post-content table th {
+    background: var(--code-bg);
+}
+
+.post-content table tr:nth-child(even) td {
+    background: var(--code-bg);
+}
+
+/* Figure captions */
+.post-content figure figcaption,
+.post-content figure figcaption p {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--secondary);
+    margin-top: 0.4rem;
+}
+
+/* Mermaid diagrams */
+.post-content .mermaid {
+    display: flex;
+    justify-content: center;
+    background: transparent;
+    padding: 0.5rem 0;
+    overflow-x: auto;
+}
+
+/* Reliability facts inside the metadata box */
+.reliability-facts {
+    margin-top: 0.35rem;
+    padding-top: 0.35rem;
+    border-top: 1px dashed var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    color: var(--secondary);
+}

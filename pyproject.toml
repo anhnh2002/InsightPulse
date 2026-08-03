@@ -12,6 +12,7 @@ dependencies = [
     "python-frontmatter>=1.1",
     # caw imports mcp.server.fastmcp, which was removed in mcp 2.0
     "mcp>=1.21.1,<2",
+    "pymupdf>=1.24",
 ]
 
 [project.scripts]

@@ -1,0 +1,10 @@
+{{- if .Page.Store.Get "hasMermaid" }}
+<script src="{{ "js/mermaid.min.js" | relURL }}"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: document.body.classList.contains("dark") ? "dark" : "neutral",
+    securityLevel: "loose",
+  });
+</script>
+{{- end }}

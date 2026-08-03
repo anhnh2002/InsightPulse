@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import logging
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
 import frontmatter
 
 from insightpulse.paths import BLOG_CONTENT, ROOT
+from insightpulse.queue import VI_SEPARATOR
 
 log = logging.getLogger(__name__)
 
@@ -36,18 +38,52 @@ def publish_draft(draft_path: Path) -> Path:
         "tags": m.get("keywords", []),
         "topics": topic_terms,
         "item_kind": m.get("kind", ""),  # "kind" is reserved by Hugo
+        "item_source": m.get("source", ""),
         "kol": m.get("kol", ""),
         "source_url": m.get("source_url", ""),
         "draft_id": m.get("id", ""),
     }
-    for key in ("paper", "repo", "reliability"):
+    for key in ("paper", "repo", "reliability", "social"):
         if m.get(key):
             hugo_meta[key] = m[key]
 
-    BLOG_CONTENT.mkdir(parents=True, exist_ok=True)
-    out = BLOG_CONTENT / f"{m.get('date', '')}-{_slugify(str(m.get('title', '')))}.md"
-    out.write_bytes(frontmatter.dumps(frontmatter.Post(post.content, **hugo_meta)).encode())
-    log.info("published %s -> %s", draft_path.name, out)
+    bundle_name = f"{m.get('date', '')}-{_slugify(str(m.get('title', '')))}"
+
+    figures = m.get("figures", []) or []
+    hero = m.get("hero_figure", "")
+    if hero:
+        cap = next((f.get("caption", "") for f in figures if f.get("file") == hero), "")
+        hugo_meta["cover"] = {"image": hero, "alt": cap or hugo_meta["title"],
+                              "caption": cap, "relative": True}
+
+    en_body, _, vi_body = post.content.partition(VI_SEPARATOR)
+    en_body, vi_body = en_body.strip(), vi_body.strip()
+
+    # leaf page bundle: figures live next to index.md and resolve natively;
+    # index.vi.md in the same bundle is auto-linked as the translation
+    bundle = BLOG_CONTENT / bundle_name
+    bundle.mkdir(parents=True, exist_ok=True)
+    out = bundle / "index.md"
+    out.write_bytes(frontmatter.dumps(frontmatter.Post(en_body, **hugo_meta)).encode())
+    if vi_body:
+        meta_vi = dict(hugo_meta)
+        meta_vi["title"] = m.get("title_vi") or hugo_meta["title"]
+        meta_vi["summary"] = m.get("summary_vi") or hugo_meta["summary"]
+        meta_vi["description"] = meta_vi["summary"]
+        if hero:
+            # bundle resources publish under the EN permalink only; point the
+            # VI cover at that site-absolute path so its og:image resolves
+            meta_vi["cover"] = dict(hugo_meta["cover"])
+            meta_vi["cover"]["image"] = f"/posts/{bundle_name}/{hero}"
+            meta_vi["cover"]["relative"] = False
+        (bundle / "index.vi.md").write_bytes(
+            frontmatter.dumps(frontmatter.Post(vi_body, **meta_vi)).encode()
+        )
+    assets = draft_path.parent / str(m.get("id", draft_path.stem)) / "figures"
+    if assets.is_dir():
+        shutil.copytree(assets, bundle / "figures", dirs_exist_ok=True)
+    log.info("published %s -> %s%s", draft_path.name, out,
+             " (+vi)" if vi_body else "")
     return out
 
 

@@ -53,8 +53,8 @@ def _strip_html(html: str) -> str:
     return re.sub(r"\n\s*\n+", "\n\n", text).strip()
 
 
-def fetch_paper_text(meta: PaperMeta, char_cap: int) -> str:
-    """Best-effort full text: ar5iv HTML → arxiv html → abstract only."""
+def fetch_paper_html(meta: PaperMeta) -> tuple[str, str] | None:
+    """Best-effort paper HTML: ar5iv → arxiv html. Returns (final_url, html)."""
     for url in (
         f"https://ar5iv.labs.arxiv.org/html/{meta.arxiv_id}",
         f"https://arxiv.org/html/{meta.arxiv_id}",
@@ -65,9 +65,17 @@ def fetch_paper_text(meta: PaperMeta, char_cap: int) -> str:
                 text = _strip_html(resp.text)
                 if len(text) > 2000:
                     log.info("arxiv %s: got %d chars from %s", meta.arxiv_id, len(text), url)
-                    return text[:char_cap]
+                    return str(resp.url), resp.text
         except httpx.HTTPError as e:
             log.debug("arxiv %s: %s failed: %s", meta.arxiv_id, url, e)
+    return None
+
+
+def fetch_paper_text(meta: PaperMeta, char_cap: int) -> str:
+    """Best-effort full text: ar5iv HTML → arxiv html → abstract only."""
+    res = fetch_paper_html(meta)
+    if res:
+        return _strip_html(res[1])[:char_cap]
     log.warning("arxiv %s: falling back to abstract only", meta.arxiv_id)
     return f"{meta.title}\n\nAbstract: {meta.abstract}"
 

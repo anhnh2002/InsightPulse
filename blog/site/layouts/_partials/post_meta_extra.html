@@ -1,6 +1,6 @@
 {{- /* Reliability metadata box rendered under the post title */ -}}
 {{- $p := .Params -}}
-{{- if or $p.paper $p.repo $p.source_url -}}
+{{- if or $p.paper $p.repo $p.source_url $p.reliability -}}
 <div class="post-meta" style="margin: 0.5rem 0 1rem; padding: 0.6rem 0.9rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem;">
   {{- with $p.paper }}
   <div>📄 <a href="{{ .abs_url }}" rel="noopener" target="_blank">{{ .arxiv_id }}</a>
@@ -13,6 +13,14 @@
   {{- end }}
   {{- with $p.source_url }}
   <div>🔗 <a href="{{ . }}" rel="noopener" target="_blank">original post</a>{{ with $p.kol }} by {{ . }}{{ end }}</div>
+  {{- end }}
+  {{- with $p.reliability }}
+  <div class="reliability-facts">
+    {{- with .venue }}<span>🏛 {{ . }}</span>{{ end }}
+    {{- if isset . "code_available" }}<span>💻 Code: {{ if .code_available }}available{{ else }}not released{{ end }}</span>{{ end }}
+    {{- with .authors_orgs }}<span>👥 {{ . }}</span>{{ end }}
+    {{- with .evidence }}<span>📊 {{ . }}</span>{{ end }}
+  </div>
   {{- end }}
 </div>
 {{- end -}}

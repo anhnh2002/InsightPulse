@@ -17,6 +17,4 @@ limits:
 topics:
   max_depth: 3
 
-blog:
-  base_url: http://localhost:8080/
-  title: InsightPulse
+# Blog settings (baseURL, title, languages) live in blog/site/hugo.toml.

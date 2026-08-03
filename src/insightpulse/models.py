@@ -79,6 +79,9 @@ class Draft(BaseModel):
     title: str
     summary: str
     body_markdown: str
+    title_vi: str = ""
+    summary_vi: str = ""
+    body_markdown_vi: str = ""
     topic_path: list[str]
     topic_proposed: bool = False
     keywords: list[str] = Field(default_factory=list)
@@ -88,5 +91,8 @@ class Draft(BaseModel):
     paper: PaperMeta | None = None
     repo: RepoMeta | None = None
     reliability: dict = Field(default_factory=dict)
+    social: dict = Field(default_factory=dict)
+    hero_figure: str = ""
+    figures: list[dict] = Field(default_factory=list)
     run_id: str = ""
     date: str = ""

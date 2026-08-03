@@ -1,0 +1,18 @@
+{{- /* Static quote card for the originating social post; no external JS. */ -}}
+{{- with .Page.Params.social }}
+<blockquote class="source-post">
+  <p>{{ .text }}</p>
+  <footer>&mdash; {{ .author | default $.Page.Params.kol }}
+    {{- with .created_at }}<span class="source-post-date"> · {{ . }}</span>{{ end }}
+    {{- with $.Page.Params.source_url }} · <a href="{{ . }}" rel="noopener" target="_blank">
+      {{- if eq $.Page.Params.item_source "x" }}View on X{{ else if eq $.Page.Params.item_source "linkedin" }}View on LinkedIn{{ else }}View original{{ end -}}
+    </a>{{ end }}
+  </footer>
+</blockquote>
+{{- else }}
+{{- with .Page.Params.source_url }}
+<blockquote class="source-post">
+  <footer><a href="{{ . }}" rel="noopener" target="_blank">View the original post</a>{{ with $.Page.Params.kol }} by {{ . }}{{ end }}</footer>
+</blockquote>
+{{- end }}
+{{- end }}

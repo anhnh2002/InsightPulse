@@ -1,7 +1,8 @@
 baseURL = "http://localhost:8080/"
-locale = "en-us"
 title = "InsightPulse"
 theme = "PaperMod"
+defaultContentLanguage = "en"
+defaultContentLanguageInSubdir = false
 
 [taxonomies]
 tag = "tags"
@@ -9,7 +10,9 @@ topic = "topics"
 
 [params]
 description = "AI-assisted digests of papers and news shared by ML thought leaders"
+images = ["images/og-default.png"]
 defaultTheme = "auto"
+displayFullLangName = true
 ShowReadingTime = true
 ShowShareButtons = false
 ShowPostNavLinks = true
@@ -17,23 +20,52 @@ ShowBreadCrumbs = true
 ShowCodeCopyButtons = true
 ShowRssButtonInSectionTermList = true
 
-[params.homeInfoParams]
-Title = "InsightPulse"
-Content = "Curated, opinionated blog posts about papers and news surfaced from KOLs on X and LinkedIn — written by AI agents, reviewed by a human."
+[languages.en]
+languageName = "English"
+languageCode = "en-US"
+weight = 1
 
-[[menus.main]]
+[languages.en.params.homeInfoParams]
+Title = "InsightPulse"
+Content = "Curated, opinionated blog posts about papers and news surfaced from KOLs on X and LinkedIn"
+
+[[languages.en.menus.main]]
 name = "Posts"
 url = "/posts/"
 weight = 10
 
-[[menus.main]]
+[[languages.en.menus.main]]
 name = "Topics"
 url = "/topics/"
 weight = 20
 
-[[menus.main]]
+[[languages.en.menus.main]]
 name = "Tags"
 url = "/tags/"
+weight = 30
+
+[languages.vi]
+languageName = "Tiếng Việt"
+languageCode = "vi-VN"
+weight = 2
+
+[languages.vi.params.homeInfoParams]
+Title = "InsightPulse"
+Content = "Bài viết chọn lọc về các bài báo khoa học và tin tức AI từ các KOL trên X và LinkedIn"
+
+[[languages.vi.menus.main]]
+name = "Bài viết"
+url = "/vi/posts/"
+weight = 10
+
+[[languages.vi.menus.main]]
+name = "Chủ đề"
+url = "/vi/topics/"
+weight = 20
+
+[[languages.vi.menus.main]]
+name = "Thẻ"
+url = "/vi/tags/"
 weight = 30
 
 [markup.goldmark.renderer]

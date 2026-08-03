@@ -18,6 +18,7 @@ from insightpulse.agents.writer import write_blog
 from insightpulse.config import load_kols, load_settings
 from insightpulse.dates import parse_post_date, yesterday_utc
 from insightpulse.enrich import arxiv as arxiv_enrich
+from insightpulse.enrich import figures as figures_enrich
 from insightpulse.enrich import github as github_enrich
 from insightpulse.models import Kind, RawPost, Source, TriageResult
 from insightpulse.paths import RAW_DIR, RUN_LOCK, RUNS_DIR, ensure_dirs
@@ -214,7 +215,18 @@ def process_item(state: State, item_id: str, post: RawPost, tri: TriageResult,
     if kind == Kind.paper:
         paper_meta = arxiv_enrich.fetch_meta(arxiv_id)
         meta["paper"] = paper_meta.model_dump()
-        text = arxiv_enrich.fetch_paper_text(paper_meta, settings.limits.paper_text_chars)
+        res = arxiv_enrich.fetch_paper_html(paper_meta)
+        if res:
+            page_url, html = res
+            text = arxiv_enrich._strip_html(html)[:settings.limits.paper_text_chars]
+            figs = figures_enrich.extract_html_figures(html, page_url, workdir)
+        else:
+            log.warning("arxiv %s: falling back to abstract only", arxiv_id)
+            text = f"{paper_meta.title}\n\nAbstract: {paper_meta.abstract}"
+            figs = []
+        if not figs and paper_meta.pdf_url:
+            figs = figures_enrich.extract_pdf_figures(paper_meta.pdf_url, workdir)
+        figures_enrich.write_manifest(figs, workdir)
         (workdir / "paper.txt").write_text(text)
     else:
         chunks = []
@@ -248,8 +260,13 @@ def process_item(state: State, item_id: str, post: RawPost, tri: TriageResult,
         paper=paper_meta,
         repo=repo_meta,
         date_str=draft_date.isoformat(),
+        social={
+            "text": post.text[:500],
+            "author": post.author_name or post.kol,
+            "created_at": post.created_at,
+        },
     )
-    review_queue.write_draft(draft)
+    review_queue.write_draft(draft, workdir=workdir)
     state.set_status(item_id, "drafted")
 
 

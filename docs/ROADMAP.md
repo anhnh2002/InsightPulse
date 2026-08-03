@@ -17,9 +17,9 @@ Currently the pipeline runs on the host because auth is host-side. To containeri
 
 ## Smaller items
 - Retry/backoff queue for codex rate limits (today: fail fast, item retried next run).
-- Richer paper ingestion: PDF figures, OpenReview reviews as extra writer context.
+- Richer paper ingestion: OpenReview reviews as extra writer context (PDF/HTML figures: done 2026-08-02).
 - OpenReview / HuggingFace papers as first-class sources alongside X/LinkedIn.
-- Blog polish: OG images, per-post hero images, comments.
+- Blog polish: comments (giscus needs a public GitHub repo with Discussions; OG/hero images done 2026-08-02). Vietnamese taxonomy term names (tags/topics currently show English terms under /vi/).
 - Taxonomy refactoring tooling: moving existing published posts when the topic tree is reorganized.
 - LinkedIn dedup hardening: text-hash dedup can duplicate edited posts (arXiv-id dedup already catches the same-paper case).
 - `insightpulse watch` streaming mode (Agent-Reach has a `watch` command) instead of poll-based cron.

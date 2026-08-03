@@ -117,7 +117,7 @@ def list_cmd(status: str = typer.Option("pending", help="pending | accepted | re
         console.print(f"No {status} drafts.")
         return
     table = Table(title=f"{status} drafts ({len(drafts)})")
-    for col in ("id", "kind", "title", "topic", "kol"):
+    for col in ("id", "kind", "title", "topic", "kol", "vi", "figs"):
         table.add_column(col)
     for d in drafts:
         m = d.metadata
@@ -125,7 +125,9 @@ def list_cmd(status: str = typer.Option("pending", help="pending | accepted | re
         if m.get("topic_proposed"):
             topic += " *new"
         table.add_row(str(m.get("id")), str(m.get("kind", "")),
-                      str(m.get("title", ""))[:60], topic, str(m.get("kol", "")))
+                      str(m.get("title", ""))[:60], topic, str(m.get("kol", "")),
+                      "✓" if m.get("title_vi") else "",
+                      str(len(m.get("figures", []) or [])) if m.get("figures") else "")
     console.print(table)
 
 
@@ -152,7 +154,11 @@ def review(draft_id: str):
         raise typer.Exit(1)
     prompt = (
         f"Review the blog draft at {path}. Check: factual accuracy against the "
-        f"linked sources, quality of the My Take section, topic classification "
+        f"linked sources, that the story is understandable to a reader with no "
+        f"ML background, that the Glossary only defines truly rare terms "
+        f"(widely known ones like LLM or AI agent need no entry), that the "
+        f"Vietnamese version reads naturally and keeps English tech terms "
+        f"as-is (including in the title), topic classification "
         f"and keywords in the frontmatter. Suggest concrete edits, and apply "
         f"them to the file if I approve. Afterwards I will run "
         f"`insightpulse accept {draft_id}` or `insightpulse reject {draft_id}`."
