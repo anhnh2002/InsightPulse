@@ -27,7 +27,7 @@ class Kols(BaseModel):
 
 
 class Models(BaseModel):
-    extractor: str = "FAST"
+    crawler: str = "FAST"
     triage: str = "FAST"
     writer: str = "STRONGEST"
 

@@ -53,6 +53,17 @@ _DAY_MULT = {
 }
 
 
+# How far a resolved approx_date may actually sit from the true post day, given
+# the precision of the relative age it came from ("2w" → ±3d, "1mo" → ±15d).
+PRECISION_TOLERANCE_DAYS = {"day": 0, "week": 3, "month": 15, "unknown": 0}
+
+
+def overlaps_window(approx: date, precision: str, start: date, end: date) -> bool:
+    """True if a post's date-uncertainty band intersects [start, end]."""
+    tol = timedelta(days=PRECISION_TOLERANCE_DAYS.get(precision, 0))
+    return approx + tol >= start and approx - tol <= end
+
+
 def parse_post_date(s: str, ref: datetime) -> date | None:
     """Resolve an absolute ("2026-07-28") or relative ("16 giờ", "2w") post date.
 

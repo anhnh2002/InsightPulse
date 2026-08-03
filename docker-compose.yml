@@ -17,5 +17,5 @@ services:
     working_dir: /src
     volumes:
       - ./blog/site:/src
-    command: hugo --minify
+    command: hugo --minify --cleanDestinationDir
     profiles: [build]

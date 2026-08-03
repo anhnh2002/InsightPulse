@@ -6,6 +6,6 @@ x:
 linkedin:
   - kind: person        # fetched via get_person_profile(sections="posts")
     id: omarsar
-    max_scrolls: 10
+    max_scrolls: 10     # initial scroll-depth suggestion for the crawl agent
   - kind: company       # fetched via get_company_posts
     id: dair-ai

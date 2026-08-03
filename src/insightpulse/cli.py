@@ -79,8 +79,8 @@ def run(
 
     target = _parse_day_opt(date, "--date") if date else None
     counts = run_pipeline(sources=_parse_sources(source), kinds=_parse_kinds(kind),
-                          limit=limit, dry_run=dry_run, target_date=target,
-                          auto_accept=auto_accept)
+                          limit=limit, dry_run=dry_run, start_date=target,
+                          end_date=target, auto_accept=auto_accept)
     console.print(f"[bold]Run finished:[/bold] {counts}")
 
 
@@ -94,14 +94,15 @@ def backfill(
                                            "mix of x, linkedin"),
     kind: str = typer.Option("all", help="kinds to write: all or a comma-separated mix "
                                          "of paper, news (others stay queued)"),
-    limit: int = typer.Option(None, help="max items sent to the writer per day"),
+    limit: int = typer.Option(None, help="max items sent to the writer this run "
+                                         "(overflow stays triaged for later runs)"),
     dry_run: bool = typer.Option(False, help="collect + dedup only, no agents"),
     auto_accept: bool = typer.Option(
         None, "--auto-accept/--no-auto-accept",
         help="accept + publish drafts immediately, skipping review "
              "(default: review.auto_accept in settings.yaml)"),
 ):
-    """Run the pipeline once per past day, oldest first."""
+    """Run one pipeline pass covering the whole past-day window."""
     from insightpulse.dates import yesterday_utc
     from insightpulse.pipeline import run_pipeline
 
@@ -124,30 +125,68 @@ def backfill(
     if end > yesterday_utc():
         raise typer.BadParameter("--to cannot be later than yesterday (complete days only)")
 
-    results: list[tuple[date, str]] = []
-    failed = False
-    day = start
-    while day <= end:
-        console.print(f"[bold]Backfilling {day}…[/bold]")
-        try:
-            counts = run_pipeline(sources=sources, kinds=kinds, limit=limit,
-                                  dry_run=dry_run, target_date=day,
-                                  auto_accept=auto_accept)
-            results.append((day, str(counts)))
-        except Exception as e:
-            failed = True
-            results.append((day, f"FAILED: {e}"))
-            console.print(f"[red]{day} failed:[/red] {e}")
-        day += timedelta(days=1)
+    console.print(f"[bold]Backfilling {start} → {end}…[/bold]")
+    counts = run_pipeline(sources=sources, kinds=kinds, limit=limit,
+                          dry_run=dry_run, start_date=start, end_date=end,
+                          auto_accept=auto_accept, backfill=True)
+    console.print(f"[bold]Backfill {start} → {end} finished:[/bold] {counts}")
 
-    table = Table(title=f"Backfill {start} → {end}")
-    table.add_column("day")
-    table.add_column("result")
-    for d, r in results:
-        table.add_row(str(d), r)
+
+@app.command()
+def posts(
+    status: str = typer.Option("collected", help="item status to list: collected | "
+                                                 "triaged | skipped | drafted | ..."),
+    full: bool = typer.Option(False, help="print full post text and links"),
+):
+    """Show crawled posts before any blog writing (pairs with `run --dry-run`)."""
+    import json as _json
+
+    from insightpulse.state import State
+
+    with State() as state:
+        rows = state.items_by_status(status)
+    if not rows:
+        console.print(f"No items with status '{status}'.")
+        return
+    if full:
+        for r in rows:
+            links = _json.loads(r["links_json"])
+            console.print(f"[bold]{r['id']}[/bold]  {r['source']}/{r['kol']}  "
+                          f"posted {r['posted_at'] or '?'}")
+            for u in links:
+                console.print(f"  link: {u}")
+            console.print(r["post_text"])
+            console.print("─" * 60)
+        return
+    table = Table(title=f"{status} items ({len(rows)})")
+    for col in ("id", "source", "kol", "posted", "links", "text"):
+        table.add_column(col)
+    for r in rows:
+        n_links = len(_json.loads(r["links_json"]))
+        table.add_row(r["id"], r["source"], r["kol"], r["posted_at"] or "?",
+                      str(n_links), r["post_text"][:70].replace("\n", " "))
     console.print(table)
-    if failed:
-        raise typer.Exit(1)
+
+
+@app.command()
+def process(
+    kind: str = typer.Option("all", help="kinds to write: all or a comma-separated mix "
+                                         "of paper, news (others stay queued)"),
+    limit: int = typer.Option(None, help="max items sent to the writer this run"),
+    auto_accept: bool = typer.Option(
+        None, "--auto-accept/--no-auto-accept",
+        help="accept + publish drafts immediately, skipping review "
+             "(default: review.auto_accept in settings.yaml)"),
+):
+    """Triage + write already-collected posts without crawling anything.
+
+    Use after inspecting a `run --dry-run` crawl with `posts`.
+    """
+    from insightpulse.pipeline import run_pipeline
+
+    counts = run_pipeline(sources=set(), kinds=_parse_kinds(kind), limit=limit,
+                          auto_accept=auto_accept)
+    console.print(f"[bold]Process finished:[/bold] {counts}")
 
 
 @app.command("list")

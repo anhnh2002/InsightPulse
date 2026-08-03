@@ -3,8 +3,8 @@
 Semi-autonomous pipeline that watches AI/ML thought leaders (KOLs) on **X** and **LinkedIn**, has AI agents write opinionated blog drafts about the papers and news they share, queues the drafts for **your** review, and publishes accepted posts to a self-hosted blog.
 
 ```
-X / LinkedIn ──collect──▶ extract ──▶ dedup ──▶ triage ──▶ enrich ──▶ write ──▶ review queue ──accept──▶ blog
-   (Agent-Reach)          (agent)   (SQLite)   (agent)  (arXiv/gh)  (agent)   (markdown files)        (Hugo+nginx)
+X / LinkedIn ──crawl+extract──▶ dedup ──▶ triage ──▶ enrich ──▶ write ──▶ review queue ──accept──▶ blog
+ (Agent-Reach)  (agent-driven)  (SQLite)   (agent)  (arXiv/gh)  (agent)   (markdown files)        (Hugo+nginx)
 ```
 
 ## Prerequisites (host)
@@ -32,11 +32,13 @@ uv run insightpulse run --date 2026-07-30   # a specific day
 uv run insightpulse run --source x --limit 3          # X only (--source x,linkedin for both)
 uv run insightpulse run --kind paper                  # write only paper posts; triaged news
                                                       # stays queued for a later run
-uv run insightpulse run --dry-run           # collect + dedup only, no agents
+uv run insightpulse run --dry-run           # collect + dedup only, no blog writing
+uv run insightpulse posts                   # inspect the raw crawled posts (--full for everything)
+uv run insightpulse process                 # triage + write what was collected, no re-crawl
 uv run insightpulse run --auto-accept       # publish drafts immediately, no review
 
 uv run insightpulse backfill --days 7                        # last 7 complete days
-uv run insightpulse backfill --days 7 --source linkedin --kind paper --auto-accept
+uv run insightpulse backfill --source linkedin --kind paper --auto-accept
 uv run insightpulse backfill --from 2026-07-20 --to 2026-07-25
 
 uv run insightpulse list                    # pending drafts
@@ -68,7 +70,7 @@ Each run covers exactly one UTC day of posts — by default **yesterday**, so a 
 0 8 * * * cd ~/InsightPulse && uv run insightpulse run >> data/cron.log 2>&1
 ```
 
-Runs are idempotent: the day window plus cross-run dedup means re-running a day collects nothing new and only retries previously failed items. If cron missed some days, catch up with `insightpulse backfill --days N` (or `--from`/`--to`) — it runs the pipeline once per day, oldest first. X backfill works for any past day (date-scoped search); LinkedIn only exposes relative post ages ("3d", "2 tuần"), so days older than ~a week are automatically skipped for LinkedIn.
+Runs are idempotent: the day window plus cross-run dedup means re-running a day collects nothing new and only retries previously failed items. If cron missed some days, catch up with `insightpulse backfill --days N` (or `--from`/`--to`) — it runs the pipeline **once over the whole window**: X is fetched per day (date-scoped search), while LinkedIn is crawled in a single agent-driven pass that scrolls each KOL deep enough to cover the window. LinkedIn only exposes relative post ages ("3d", "2 tuần"), so window matching is precision-tolerant ("2w" → ±3 days); beyond ~a month coverage becomes unreliable.
 
 A `.run.lock` in `data/` prevents overlapping runs (LinkedIn's browser profile only tolerates one process anyway).
 

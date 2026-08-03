@@ -2,7 +2,8 @@
 # Model names are raw provider strings (see `codex` account's available models),
 # or the tiers FAST / STRONGEST (caw's built-in tier map may lag the account).
 models:
-  extractor: gpt-5.6-luna    # fast & cheap: LinkedIn text extraction
+  crawler: gpt-5.6-luna      # LinkedIn crawl agent (drives the scraper + extracts posts);
+                             # bump to gpt-5.6-terra if its crawl judgment proves flaky
   triage: gpt-5.6-luna       # fast & cheap: paper/news/skip classification
   writer: gpt-5.6-sol        # frontier: blog writing
 

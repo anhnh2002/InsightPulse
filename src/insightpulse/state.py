@@ -150,6 +150,19 @@ class State:
         )
         self.conn.commit()
 
+    def set_links(self, item_id: str, links: list[str]) -> None:
+        self.conn.execute(
+            "UPDATE items SET links_json = ? WHERE id = ?",
+            (json.dumps(links), item_id),
+        )
+        self.conn.commit()
+
+    def has_dedup_key(self, key: str) -> bool:
+        row = self.conn.execute(
+            "SELECT 1 FROM items WHERE dedup_key = ? LIMIT 1", (key,)
+        ).fetchone()
+        return row is not None
+
     def arxiv_seen(self, arxiv_id: str, exclude_item: str = "") -> bool:
         """True if another item already covers this arxiv id (paper-level dedup)."""
         row = self.conn.execute(
