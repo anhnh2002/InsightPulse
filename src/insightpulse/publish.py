@@ -10,10 +10,34 @@ from pathlib import Path
 
 import frontmatter
 
+from insightpulse import topics
 from insightpulse.paths import BLOG_CONTENT, ROOT
-from insightpulse.queue import VI_SEPARATOR
+from insightpulse.queue import VI_SEPARATOR, move_draft
+from insightpulse.state import State
 
 log = logging.getLogger(__name__)
+
+
+def accept_draft(draft_id: str, topic_override: list[str] | None = None,
+                 state: State | None = None) -> Path:
+    """Accept a pending draft: merge its topic into the tree and publish it.
+
+    Does not rebuild the site — callers batch that. Pass an already-open
+    State to avoid a second connection from within a run.
+    """
+    extra = {"topic_path": topic_override, "topic_proposed": False} if topic_override else {}
+    dest = move_draft(draft_id, "accepted", extra)
+    meta = frontmatter.load(dest).metadata
+    topics.merge_path([str(s) for s in meta["topic_path"]])
+    out = publish_draft(dest)
+    if state is not None:
+        if state.get_item(draft_id):
+            state.set_status(draft_id, "accepted")
+    else:
+        with State() as s:
+            if s.get_item(draft_id):
+                s.set_status(draft_id, "accepted")
+    return out
 
 
 def _slugify(title: str) -> str:

@@ -17,4 +17,8 @@ limits:
 topics:
   max_depth: 3
 
+review:
+  auto_accept: false         # true: publish drafts immediately without review
+                             # (override per run with --auto-accept / --no-auto-accept)
+
 # Blog settings (baseURL, title, languages) live in blog/site/hugo.toml.

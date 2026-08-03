@@ -22,6 +22,7 @@ from insightpulse.enrich import figures as figures_enrich
 from insightpulse.enrich import github as github_enrich
 from insightpulse.models import Kind, RawPost, Source, TriageResult
 from insightpulse.paths import RAW_DIR, RUN_LOCK, RUNS_DIR, ensure_dirs
+from insightpulse.publish import accept_draft, rebuild_site
 from insightpulse.sources import linkedin_source, x_source
 from insightpulse.state import State, new_run_id
 
@@ -314,16 +315,20 @@ def _leftover_items(state: State, exclude_ids: set[str]) -> list[tuple[str, RawP
 
 
 def run_pipeline(source: str = "all", limit: int | None = None,
-                 dry_run: bool = False, target_date: date | None = None) -> dict:
+                 dry_run: bool = False, target_date: date | None = None,
+                 auto_accept: bool | None = None) -> dict:
     """Execute one pipeline pass covering a single UTC day. Returns counts."""
     ensure_dirs()
     settings = load_settings()
     limit = limit if limit is not None else settings.limits.items_per_run
+    auto_accept = auto_accept if auto_accept is not None else settings.review.auto_accept
     target_date = target_date or yesterday_utc()
     _acquire_lock()
     run_id = new_run_id(target_date)
     run_dir = RUNS_DIR / run_id
     counts = {"collected": 0, "triaged": 0, "drafted": 0, "failed": 0}
+    if auto_accept:
+        counts["accepted"] = 0
     try:
         with State() as state:
             state.start_run(run_id, target_date.isoformat())
@@ -358,11 +363,23 @@ def run_pipeline(source: str = "all", limit: int | None = None,
                     log.exception("item %s failed", item_id)
                     state.set_status(item_id, "failed:write", str(e)[:500])
                     counts["failed"] += 1
+                    continue
+                if auto_accept:
+                    try:
+                        out = accept_draft(item_id, state=state)
+                        counts["accepted"] += 1
+                        log.info("item %s auto-accepted -> %s", item_id, out)
+                    except Exception:
+                        log.exception("item %s auto-accept failed; draft left pending",
+                                      item_id)
             if len(work) > limit:
                 log.info("run %s: %d triaged items beyond --limit left for next run",
                          run_id, len(work) - limit)
 
             state.finish_run(run_id, counts)
+
+        if counts.get("accepted"):
+            rebuild_site()
     finally:
         _release_lock()
     log.info("run %s finished: %s", run_id, counts)

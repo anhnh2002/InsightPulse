@@ -93,6 +93,7 @@ def move_draft(draft_id: str, dest: str, extra_meta: dict | None = None) -> Path
     if not src.exists():
         raise FileNotFoundError(f"no pending draft {draft_id}")
     dest_dir = {"accepted": QUEUE_ACCEPTED, "rejected": QUEUE_REJECTED}[dest]
+    dest_dir.mkdir(parents=True, exist_ok=True)
     post = frontmatter.load(src)
     if extra_meta:
         post.metadata.update(extra_meta)

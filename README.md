@@ -31,8 +31,10 @@ uv run insightpulse run                     # one pass over yesterday (UTC), all
 uv run insightpulse run --date 2026-07-30   # a specific day
 uv run insightpulse run --source x --limit 3
 uv run insightpulse run --dry-run           # collect + dedup only, no agents
+uv run insightpulse run --auto-accept       # publish drafts immediately, no review
 
 uv run insightpulse backfill --days 7                        # last 7 complete days
+uv run insightpulse backfill --days 30 --source  --auto-accept                         # last 7 complete days
 uv run insightpulse backfill --from 2026-07-20 --to 2026-07-25
 
 uv run insightpulse list                    # pending drafts
@@ -47,6 +49,8 @@ uv run insightpulse status                  # item counts + recent runs
 ```
 
 Drafts are plain markdown files in `data/queue/pending/` — you can also edit them directly (or point codex at them) before accepting.
+
+To run fully autonomously, skip the review queue with `--auto-accept` (or set `review.auto_accept: true` in `config/settings.yaml` to make it the default; `--no-auto-accept` overrides it per run). Drafts are then accepted and published as soon as they are written — including any new topic nodes the writer proposes — and the site is rebuilt once at the end of the run. A draft whose accept step fails stays in `data/queue/pending/` for manual handling.
 
 ## Configuration
 

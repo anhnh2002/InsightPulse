@@ -38,6 +38,10 @@ def run(
     dry_run: bool = typer.Option(False, help="collect + dedup only, no agents"),
     date: str = typer.Option(None, "--date",
                              help="target day YYYY-MM-DD (UTC); default: yesterday"),
+    auto_accept: bool = typer.Option(
+        None, "--auto-accept/--no-auto-accept",
+        help="accept + publish drafts immediately, skipping review "
+             "(default: review.auto_accept in settings.yaml)"),
 ):
     """Run one pipeline pass over a single day: crawl → triage → enrich → write → queue."""
     from insightpulse.pipeline import run_pipeline
@@ -45,7 +49,8 @@ def run(
     if source not in ("all", "x", "linkedin"):
         raise typer.BadParameter("source must be all | x | linkedin")
     target = _parse_day_opt(date, "--date") if date else None
-    counts = run_pipeline(source=source, limit=limit, dry_run=dry_run, target_date=target)
+    counts = run_pipeline(source=source, limit=limit, dry_run=dry_run, target_date=target,
+                          auto_accept=auto_accept)
     console.print(f"[bold]Run finished:[/bold] {counts}")
 
 
@@ -58,6 +63,10 @@ def backfill(
     source: str = typer.Option("all", help="all | x | linkedin"),
     limit: int = typer.Option(None, help="max items sent to the writer per day"),
     dry_run: bool = typer.Option(False, help="collect + dedup only, no agents"),
+    auto_accept: bool = typer.Option(
+        None, "--auto-accept/--no-auto-accept",
+        help="accept + publish drafts immediately, skipping review "
+             "(default: review.auto_accept in settings.yaml)"),
 ):
     """Run the pipeline once per past day, oldest first."""
     from insightpulse.dates import yesterday_utc
@@ -89,7 +98,7 @@ def backfill(
         console.print(f"[bold]Backfilling {day}…[/bold]")
         try:
             counts = run_pipeline(source=source, limit=limit, dry_run=dry_run,
-                                  target_date=day)
+                                  target_date=day, auto_accept=auto_accept)
             results.append((day, str(counts)))
         except Exception as e:
             failed = True
@@ -174,28 +183,17 @@ def accept(
 ):
     """Accept a draft: merge its topic into the tree and publish it to the blog."""
     from insightpulse import topics
-    from insightpulse.publish import publish_draft, rebuild_site
-    from insightpulse.queue import move_draft
-    from insightpulse.state import State
+    from insightpulse.publish import accept_draft, rebuild_site
 
-    extra = {}
+    path = None
     if topic:
         path = topic.strip("/").split("/")
         valid, err, _ = topics.validate_path(path)
         if not valid:
             console.print(f"[red]--topic invalid: {err}[/red]")
             raise typer.Exit(1)
-        extra = {"topic_path": path, "topic_proposed": False}
 
-    dest = move_draft(draft_id, "accepted", extra)
-    import frontmatter
-
-    meta = frontmatter.load(dest).metadata
-    topics.merge_path([str(s) for s in meta["topic_path"]])
-    out = publish_draft(dest)
-    with State() as state:
-        if state.get_item(draft_id):
-            state.set_status(draft_id, "accepted")
+    out = accept_draft(draft_id, topic_override=path)
     console.print(f"[green]Accepted[/green] {draft_id} → {out}")
     if not no_build:
         rebuild_site()

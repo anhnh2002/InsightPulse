@@ -43,11 +43,16 @@ class TopicSettings(BaseModel):
     max_depth: int = 3
 
 
+class ReviewSettings(BaseModel):
+    auto_accept: bool = False
+
+
 class Settings(BaseModel):
     models: Models = Field(default_factory=Models)
     provider: str = "codex"
     limits: Limits = Field(default_factory=Limits)
     topics: TopicSettings = Field(default_factory=TopicSettings)
+    review: ReviewSettings = Field(default_factory=ReviewSettings)
 
 
 def _load_yaml(name: str) -> dict:
