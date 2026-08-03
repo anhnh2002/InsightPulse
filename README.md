@@ -29,12 +29,14 @@ docker compose up -d web        # blog at http://localhost:8080
 ```bash
 uv run insightpulse run                     # one pass over yesterday (UTC), all sources
 uv run insightpulse run --date 2026-07-30   # a specific day
-uv run insightpulse run --source x --limit 3
+uv run insightpulse run --source x --limit 3          # X only (--source x,linkedin for both)
+uv run insightpulse run --kind paper                  # write only paper posts; triaged news
+                                                      # stays queued for a later run
 uv run insightpulse run --dry-run           # collect + dedup only, no agents
 uv run insightpulse run --auto-accept       # publish drafts immediately, no review
 
 uv run insightpulse backfill --days 7                        # last 7 complete days
-uv run insightpulse backfill --days 30 --source  --auto-accept                         # last 7 complete days
+uv run insightpulse backfill --days 7 --source linkedin --kind paper --auto-accept
 uv run insightpulse backfill --from 2026-07-20 --to 2026-07-25
 
 uv run insightpulse list                    # pending drafts

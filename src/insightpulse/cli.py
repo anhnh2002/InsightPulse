@@ -31,9 +31,40 @@ def _parse_day_opt(value: str, opt: str) -> date:
         raise typer.BadParameter(f"{opt} must be YYYY-MM-DD") from None
 
 
+def _parse_sources(value: str) -> set:
+    from insightpulse.models import Source
+
+    if value.strip().lower() == "all":
+        return set(Source)
+    try:
+        sources = {Source(v.strip().lower()) for v in value.split(",") if v.strip()}
+    except ValueError:
+        sources = set()
+    if not sources:
+        raise typer.BadParameter("source must be all or a comma-separated mix of x, linkedin")
+    return sources
+
+
+def _parse_kinds(value: str) -> set:
+    from insightpulse.models import Kind
+
+    if value.strip().lower() == "all":
+        return {Kind.paper, Kind.news}
+    try:
+        kinds = {Kind(v.strip().lower()) for v in value.split(",") if v.strip()}
+    except ValueError:
+        kinds = set()
+    if not kinds or Kind.skip in kinds:
+        raise typer.BadParameter("kind must be all or a comma-separated mix of paper, news")
+    return kinds
+
+
 @app.command()
 def run(
-    source: str = typer.Option("all", help="all | x | linkedin"),
+    source: str = typer.Option("all", help="sources to crawl: all or a comma-separated "
+                                           "mix of x, linkedin"),
+    kind: str = typer.Option("all", help="kinds to write: all or a comma-separated mix "
+                                         "of paper, news (others stay queued)"),
     limit: int = typer.Option(None, help="max items sent to the writer this run"),
     dry_run: bool = typer.Option(False, help="collect + dedup only, no agents"),
     date: str = typer.Option(None, "--date",
@@ -46,10 +77,9 @@ def run(
     """Run one pipeline pass over a single day: crawl → triage → enrich → write → queue."""
     from insightpulse.pipeline import run_pipeline
 
-    if source not in ("all", "x", "linkedin"):
-        raise typer.BadParameter("source must be all | x | linkedin")
     target = _parse_day_opt(date, "--date") if date else None
-    counts = run_pipeline(source=source, limit=limit, dry_run=dry_run, target_date=target,
+    counts = run_pipeline(sources=_parse_sources(source), kinds=_parse_kinds(kind),
+                          limit=limit, dry_run=dry_run, target_date=target,
                           auto_accept=auto_accept)
     console.print(f"[bold]Run finished:[/bold] {counts}")
 
@@ -60,7 +90,10 @@ def backfill(
     to_date: str = typer.Option(None, "--to",
                                 help="last day YYYY-MM-DD (inclusive); default: yesterday"),
     days: int = typer.Option(None, "--days", help="backfill the last N complete days"),
-    source: str = typer.Option("all", help="all | x | linkedin"),
+    source: str = typer.Option("all", help="sources to crawl: all or a comma-separated "
+                                           "mix of x, linkedin"),
+    kind: str = typer.Option("all", help="kinds to write: all or a comma-separated mix "
+                                         "of paper, news (others stay queued)"),
     limit: int = typer.Option(None, help="max items sent to the writer per day"),
     dry_run: bool = typer.Option(False, help="collect + dedup only, no agents"),
     auto_accept: bool = typer.Option(
@@ -72,8 +105,8 @@ def backfill(
     from insightpulse.dates import yesterday_utc
     from insightpulse.pipeline import run_pipeline
 
-    if source not in ("all", "x", "linkedin"):
-        raise typer.BadParameter("source must be all | x | linkedin")
+    sources = _parse_sources(source)
+    kinds = _parse_kinds(kind)
     if (from_date is None) == (days is None):
         raise typer.BadParameter("pass exactly one of --from or --days")
     if days is not None and to_date is not None:
@@ -97,8 +130,9 @@ def backfill(
     while day <= end:
         console.print(f"[bold]Backfilling {day}…[/bold]")
         try:
-            counts = run_pipeline(source=source, limit=limit, dry_run=dry_run,
-                                  target_date=day, auto_accept=auto_accept)
+            counts = run_pipeline(sources=sources, kinds=kinds, limit=limit,
+                                  dry_run=dry_run, target_date=day,
+                                  auto_accept=auto_accept)
             results.append((day, str(counts)))
         except Exception as e:
             failed = True

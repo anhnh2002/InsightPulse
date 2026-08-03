@@ -314,12 +314,15 @@ def _leftover_items(state: State, exclude_ids: set[str]) -> list[tuple[str, RawP
     return leftovers
 
 
-def run_pipeline(source: str = "all", limit: int | None = None,
+def run_pipeline(sources: set[Source] | None = None, limit: int | None = None,
                  dry_run: bool = False, target_date: date | None = None,
-                 auto_accept: bool | None = None) -> dict:
+                 auto_accept: bool | None = None,
+                 kinds: set[Kind] | None = None) -> dict:
     """Execute one pipeline pass covering a single UTC day. Returns counts."""
     ensure_dirs()
     settings = load_settings()
+    sources = sources or set(Source)
+    kinds = kinds or {Kind.paper, Kind.news}
     limit = limit if limit is not None else settings.limits.items_per_run
     auto_accept = auto_accept if auto_accept is not None else settings.review.auto_accept
     target_date = target_date or yesterday_utc()
@@ -334,9 +337,9 @@ def run_pipeline(source: str = "all", limit: int | None = None,
             state.start_run(run_id, target_date.isoformat())
 
             new_items: list[tuple[str, RawPost]] = []
-            if source in ("all", "x"):
+            if Source.x in sources:
                 new_items += collect_x(state, run_id, target_date)
-            if source in ("all", "linkedin"):
+            if Source.linkedin in sources:
                 new_items += collect_linkedin(state, run_id, run_dir, target_date)
             counts["collected"] = len(new_items)
             log.info("run %s (day %s): %d new posts", run_id, target_date, len(new_items))
@@ -354,6 +357,13 @@ def run_pipeline(source: str = "all", limit: int | None = None,
                 log.info("run %s: picking up %d leftover items from earlier runs",
                          run_id, len(leftovers))
             work = triaged + leftovers
+
+            deferred = [w for w in work if w[2].kind not in kinds]
+            if deferred:
+                log.info("run %s: %d items outside --kind %s stay triaged for a "
+                         "later run", run_id, len(deferred),
+                         ",".join(sorted(k.value for k in kinds)))
+                work = [w for w in work if w[2].kind in kinds]
 
             for item_id, post, tri in work[:limit]:
                 try:
