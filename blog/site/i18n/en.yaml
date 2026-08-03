@@ -1,0 +1,14 @@
+- id: footer_built_by
+  translation: "Built by"
+- id: footer_star
+  translation: "If you found this useful, please give it a star on"
+- id: bookmark_add
+  translation: "☆ Bookmark"
+- id: bookmark_remove
+  translation: "★ Bookmarked"
+- id: viewed_mark
+  translation: "Mark as read"
+- id: viewed_unmark
+  translation: "✓ Read"
+- id: bookmarks_empty
+  translation: "No bookmarks yet. Use the ☆ button on any post to save it here."

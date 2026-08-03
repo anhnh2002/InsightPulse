@@ -1,0 +1,14 @@
+- id: footer_built_by
+  translation: "Xây dựng bởi"
+- id: footer_star
+  translation: "Nếu thấy hữu ích, hãy tặng một sao trên"
+- id: bookmark_add
+  translation: "☆ Lưu bài"
+- id: bookmark_remove
+  translation: "★ Đã lưu"
+- id: viewed_mark
+  translation: "Đánh dấu đã đọc"
+- id: viewed_unmark
+  translation: "✓ Đã đọc"
+- id: bookmarks_empty
+  translation: "Chưa có bài nào được lưu. Dùng nút ☆ trên bài viết để lưu lại đây."

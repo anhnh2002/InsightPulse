@@ -56,6 +56,23 @@ Drafts are plain markdown files in `data/queue/pending/` — you can also edit t
 
 To run fully autonomously, skip the review queue with `--auto-accept` (or set `review.auto_accept: true` in `config/settings.yaml` to make it the default; `--no-auto-accept` overrides it per run). Drafts are then accepted and published as soon as they are written — including any new topic nodes the writer proposes — and the site is rebuilt once at the end of the run. A draft whose accept step fails stays in `data/queue/pending/` for manual handling.
 
+## Admin UI
+
+A small host-run web app for reviewing the queue and managing published posts (the blog's nginx proxies `/admin` to it):
+
+```bash
+uv run insightpulse admin set-password   # once; stores a hash in data/admin_auth.json (git-ignored)
+uv run insightpulse admin serve          # http://localhost:8080/admin/ (or directly :8082/admin/)
+docker compose up -d --force-recreate web   # once after pulling this feature, to load the new nginx config
+```
+
+From there: edit/accept/reject pending drafts, add/edit/delete published posts, and rebuild the site with one button (mutations show a "site out of date" banner instead of rebuilding on every change).
+
+Notes:
+- The server binds `0.0.0.0:8082` so the nginx container can reach it via `host.docker.internal` — on a LAN, the admin port is reachable from other machines (password-protected; put a firewall rule on 8082 if that matters).
+- CSRF is mitigated by the `SameSite=Lax` session cookie; if you ever expose the admin beyond your LAN, add per-session CSRF tokens and TLS first.
+- To keep it running: `systemd` unit with `WorkingDirectory=<repo>` and `ExecStart=uv run insightpulse admin serve`.
+
 ## Configuration
 
 - `config/kols.yaml` — the KOL watchlist; edit freely, picked up next run.

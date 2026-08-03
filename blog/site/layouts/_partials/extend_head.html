@@ -1,0 +1,14 @@
+{{- /* Bookmarks / read-marks: per-language labels + vendored script (no CDN). */ -}}
+{{- $labels := dict
+    "add" (i18n "bookmark_add")
+    "rm" (i18n "bookmark_remove")
+    "read" (i18n "viewed_mark")
+    "unread" (i18n "viewed_unmark")
+    "empty" (i18n "bookmarks_empty") }}
+{{- $cfg := dict "lang" .Language.Lang "labels" $labels }}
+{{- if and (eq .Kind "page") (eq .Section "posts") }}
+{{- $cfg = merge $cfg (dict "page" (dict "date" (.Date.Format "2006-01-02"))) }}
+{{- end }}
+<script>window.__ipBookmarks = {{ $cfg | jsonify | safeJS }};</script>
+{{- $js := resources.Get "js/bookmarks.js" | minify | fingerprint }}
+<script defer src="{{ $js.RelPermalink }}" integrity="{{ $js.Data.Integrity }}"></script>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>{% block title %}InsightPulse Admin{% endblock %}</title>
+<style>
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; max-width: 960px; margin: 0 auto; padding: 16px; }
+nav { display: flex; align-items: center; gap: 16px; padding: 10px 0; border-bottom: 1px solid #8884; margin-bottom: 20px; flex-wrap: wrap; }
+nav .brand { font-weight: 700; }
+nav a { text-decoration: none; color: inherit; }
+nav a:hover { text-decoration: underline; }
+nav form { margin-left: auto; display: flex; gap: 8px; }
+button { cursor: pointer; padding: 6px 14px; border: 1px solid #8886; border-radius: 6px; background: transparent; color: inherit; font-size: 14px; }
+button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+button.danger { border-color: #dc2626; color: #dc2626; }
+.banner { background: #f59e0b22; border: 1px solid #f59e0b; border-radius: 6px; padding: 8px 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+.error { background: #dc262622; border: 1px solid #dc2626; border-radius: 6px; padding: 8px 12px; margin-bottom: 16px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #8883; font-size: 14px; }
+textarea { width: 100%; min-height: 320px; font-family: ui-monospace, monospace; font-size: 13px; padding: 10px; border: 1px solid #8886; border-radius: 6px; background: transparent; color: inherit; }
+input[type=text], input[type=password] { padding: 8px 10px; border: 1px solid #8886; border-radius: 6px; background: transparent; color: inherit; font-size: 14px; }
+.row { display: flex; gap: 8px; align-items: center; margin: 12px 0; flex-wrap: wrap; }
+.muted { opacity: .65; }
+h1 { font-size: 22px; }
+.cards { display: flex; gap: 16px; }
+.card { border: 1px solid #8884; border-radius: 8px; padding: 16px 20px; }
+.card .num { font-size: 28px; font-weight: 700; }
+</style>
+</head>
+<body>
+<nav>
+  <span class="brand"><a href="/admin/">InsightPulse Admin</a></span>
+  <a href="/admin/queue">Queue</a>
+  <a href="/admin/posts">Posts</a>
+  <a href="/" target="_blank" rel="noopener">View site ↗</a>
+  <form method="post" action="/admin/logout"><button>Logout</button></form>
+</nav>
+{% if dirty %}
+<div class="banner">
+  <span>⚠ Content changed — the live site is out of date.</span>
+  <form method="post" action="/admin/rebuild"><button class="primary">Rebuild site</button></form>
+</div>
+{% endif %}
+{% block content %}{% endblock %}
+</body>
+</html>

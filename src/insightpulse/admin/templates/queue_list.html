@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Queue — InsightPulse Admin{% endblock %}
+{% block content %}
+<h1>Review queue</h1>
+{% if not drafts %}
+<p class="muted">No pending drafts.</p>
+{% else %}
+<table>
+  <tr><th>id</th><th>kind</th><th>title</th><th>topic</th><th>kol</th><th>vi</th></tr>
+  {% for d in drafts %}
+  <tr>
+    <td><a href="/admin/queue/{{ d.metadata.id }}">{{ d.metadata.id }}</a></td>
+    <td>{{ d.metadata.kind }}</td>
+    <td>{{ d.metadata.title }}</td>
+    <td>{{ d.metadata.topic_path | join("/") }}{% if d.metadata.topic_proposed %} <em>*new</em>{% endif %}</td>
+    <td>{{ d.metadata.kol }}</td>
+    <td>{% if d.metadata.title_vi %}✓{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

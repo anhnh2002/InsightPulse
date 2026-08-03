@@ -8,6 +8,8 @@ services:
     volumes:
       - ./blog/site/public:/usr/share/nginx/html:ro
       - ./blog/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # lets nginx proxy /admin to the host
     restart: unless-stopped
 
   # One-shot site builder, invoked by `insightpulse accept/publish`:

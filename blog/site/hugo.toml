@@ -20,6 +20,16 @@ ShowBreadCrumbs = true
 ShowCodeCopyButtons = true
 ShowRssButtonInSectionTermList = true
 
+[[params.socialIcons]]
+name = "github"
+title = "InsightPulse on GitHub"
+url = "https://github.com/anhnh2002/InsightPulse"
+
+[[params.socialIcons]]
+name = "cv"
+title = "AnhNH"
+url = "https://anhnh2002.github.io/"
+
 [languages.en]
 languageName = "English"
 languageCode = "en-US"
@@ -44,6 +54,11 @@ name = "Tags"
 url = "/tags/"
 weight = 30
 
+[[languages.en.menus.main]]
+name = "Bookmarks"
+url = "/bookmarks/"
+weight = 40
+
 [languages.vi]
 languageName = "Tiếng Việt"
 languageCode = "vi-VN"
@@ -67,6 +82,11 @@ weight = 20
 name = "Thẻ"
 url = "/vi/tags/"
 weight = 30
+
+[[languages.vi.menus.main]]
+name = "Đã lưu"
+url = "/vi/bookmarks/"
+weight = 40
 
 [markup.goldmark.renderer]
 unsafe = true

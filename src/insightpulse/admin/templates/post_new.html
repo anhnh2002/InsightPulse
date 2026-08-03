@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}New post — InsightPulse Admin{% endblock %}
+{% block content %}
+<h1>New post</h1>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<form method="post" action="/admin/posts/new">
+  <div class="row">
+    <input type="text" name="name" placeholder="bundle name, e.g. 2026-08-03-my-post" size="50" required
+           pattern="[a-z0-9][a-z0-9._-]*">
+  </div>
+  <h3>English (index.md)</h3>
+  <textarea name="en">{{ template }}</textarea>
+  <h3>Vietnamese (index.vi.md) <span class="muted">— optional</span></h3>
+  <textarea name="vi"></textarea>
+  <div class="row"><button class="primary" type="submit">Create</button></div>
+</form>
+{% endblock %}

@@ -1,0 +1,97 @@
+/* Bookmarks / read-marks (bookmarks.js) — theme vars only, works in dark & light. */
+
+.post-entry,
+.first-entry {
+    position: relative;
+}
+
+.ip-bm-btn {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    z-index: 2; /* above the card's .entry-link overlay */
+    background: var(--entry);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    line-height: 1;
+    font-size: 18px;
+    color: var(--secondary);
+    cursor: pointer;
+    padding: 0;
+}
+
+.ip-bm-btn.active {
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.post-entry.ip-viewed h2,
+.first-entry.ip-viewed h2 {
+    opacity: 0.55;
+}
+
+.post-entry.ip-viewed h2::after,
+.first-entry.ip-viewed h2::after {
+    content: " ✓";
+    color: var(--secondary);
+    font-weight: normal;
+}
+
+.ip-post-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.ip-post-actions button {
+    background: var(--entry);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--secondary);
+    cursor: pointer;
+    padding: 4px 12px;
+    font-size: 14px;
+}
+
+.ip-post-actions button.active {
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.ip-bm-item {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.ip-bm-item a {
+    flex: 1;
+    color: var(--primary);
+}
+
+.ip-bm-date {
+    color: var(--secondary);
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.ip-bm-remove {
+    background: none;
+    border: none;
+    color: var(--secondary);
+    cursor: pointer;
+    font-size: 15px;
+    padding: 2px 6px;
+}
+
+.ip-bm-remove:hover {
+    color: var(--primary);
+}
+
+.ip-bm-empty {
+    color: var(--secondary);
+}

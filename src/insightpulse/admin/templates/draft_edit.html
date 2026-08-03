@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ draft_id }} — InsightPulse Admin{% endblock %}
+{% block content %}
+<h1>Draft {{ draft_id }}</h1>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<form method="post" action="/admin/queue/{{ draft_id }}/save">
+  <textarea name="content" style="min-height:480px">{{ content }}</textarea>
+  <div class="row"><button class="primary" type="submit">Save</button></div>
+</form>
+<hr>
+<div class="row">
+  <form method="post" action="/admin/queue/{{ draft_id }}/accept" class="row" style="margin:0">
+    <input type="text" name="topic" placeholder="topic override, e.g. ai/llm/agents">
+    <button class="primary" type="submit">Accept &amp; publish</button>
+  </form>
+  <form method="post" action="/admin/queue/{{ draft_id }}/reject" class="row" style="margin:0"
+        onsubmit="return confirm('Reject this draft?')">
+    <input type="text" name="reason" placeholder="reject reason">
+    <button class="danger" type="submit">Reject</button>
+  </form>
+</div>
+{% endblock %}

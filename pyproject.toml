@@ -13,6 +13,11 @@ dependencies = [
     # caw imports mcp.server.fastmcp, which was removed in mcp 2.0
     "mcp>=1.21.1,<2",
     "pymupdf>=1.24",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+    "itsdangerous>=2.1",
 ]
 
 [project.scripts]

@@ -301,6 +301,41 @@ def publish():
     console.print("Site rebuilt.")
 
 
+admin_app = typer.Typer(help="Admin web UI (review queue + published posts)",
+                        no_args_is_help=True)
+app.add_typer(admin_app, name="admin")
+
+
+@admin_app.command("set-password")
+def admin_set_password():
+    """Set (or reset) the admin password; also rotates the session secret."""
+    from insightpulse.admin.auth import save_auth
+
+    password = typer.prompt("New admin password", hide_input=True,
+                            confirmation_prompt=True)
+    save_auth(password)
+    console.print("[green]Admin password saved[/green] (existing sessions invalidated)")
+
+
+@admin_app.command("serve")
+def admin_serve(
+    host: str = typer.Option("0.0.0.0", help="bind address (must be reachable from "
+                                             "the nginx container, so not 127.0.0.1)"),
+    port: int = typer.Option(8082, help="port nginx proxies /admin to"),
+):
+    """Run the admin web UI; the blog's nginx proxies /admin here."""
+    import uvicorn
+
+    from insightpulse.admin.app import create_app
+    from insightpulse.paths import ADMIN_AUTH
+
+    if not ADMIN_AUTH.exists():
+        console.print("[red]No admin password set.[/red] "
+                      "Run `insightpulse admin set-password` first.")
+        raise typer.Exit(1)
+    uvicorn.run(create_app(), host=host, port=port)
+
+
 @app.command()
 def status():
     """Show item counts and recent runs."""

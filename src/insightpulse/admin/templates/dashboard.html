@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Dashboard</h1>
+<div class="cards">
+  <div class="card"><div class="num">{{ pending }}</div><a href="/admin/queue">pending drafts</a></div>
+  <div class="card"><div class="num">{{ published }}</div><a href="/admin/posts">published posts</a></div>
+</div>
+<div class="row" style="margin-top:20px">
+  <form method="post" action="/admin/rebuild"><button>Rebuild site now</button></form>
+</div>
+{% endblock %}

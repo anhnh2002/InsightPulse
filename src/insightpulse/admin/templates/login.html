@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>InsightPulse Admin — Login</title>
+<style>
+:root { color-scheme: light dark; }
+body { font-family: system-ui, sans-serif; display: grid; place-items: center; min-height: 100vh; margin: 0; }
+form { border: 1px solid #8884; border-radius: 10px; padding: 28px; width: 300px; display: flex; flex-direction: column; gap: 12px; }
+input { padding: 9px 12px; border: 1px solid #8886; border-radius: 6px; background: transparent; color: inherit; }
+button { padding: 9px; border: none; border-radius: 6px; background: #2563eb; color: #fff; cursor: pointer; font-size: 15px; }
+.error { color: #dc2626; font-size: 14px; margin: 0; }
+h1 { font-size: 18px; margin: 0 0 6px; }
+</style>
+</head>
+<body>
+<form method="post" action="/admin/login">
+  <h1>InsightPulse Admin</h1>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <input type="password" name="password" placeholder="Password" autofocus required>
+  <button type="submit">Log in</button>
+</form>
+</body>
+</html>
