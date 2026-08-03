@@ -19,12 +19,11 @@ The fetch result is JSON with `sections` (raw page innerText — noisy: UI chrom
 - `text`: the post body as written, cleaned of UI artifacts (reaction counts, "Like Comment Share", "…see more"). Keep the substance verbatim; do not summarize or paraphrase. If a post is truncated ("…see more"), extract what is visible.
 - `author`: the display name of who authored the post (the page owner for original posts, the original author for reshares).
 
-## Links — critical
+## Paper identification — critical
 
-The innerText rarely contains URLs; harvest links from every available place:
-- `references` entries with `context` like "post attachment" are the outbound links (papers, repos, blogs) of specific posts. Match each such reference to its post using ordering and the reference's `text` snippet, and put every matched URL in that post's `links`. Keep `lnkd.in` shortener links as-is. Do not leave `links` empty when a plausible attachment reference exists for that post.
-- **Comments are usually invisible**: authors routinely put the paper/repo link in the first comment ("Link in comments"), but the scraper generally captures only comment counts, not comment bodies. If comment-preview text does appear in the innerText, harvest its URLs into the post above it — but do not rely on it. Do NOT hunt for missing links yourself: a separate pass after the crawl searches the web for each link-less post. Your job is to extract the post text faithfully — including any paper title it names — and submit it even when `links` stays empty.
-- URLs containing `/feed/update/urn:li:activity:` are post permalinks — set the matching post's `permalink` to that URL. Leave `permalink` empty when none is found.
+- `paper_name`: the exact title or short-name of the research paper the post is about, verbatim as the post names it — e.g. `SkillSmith`, or the full `Name: Subtitle` when the post shows it. Empty string when the post is not about a specific paper or names none. If a post covers several papers, use the primary one.
+- Do NOT extract, match, or hunt for URLs — downstream resolves papers by name, not by link.
+- `references` URLs containing `/feed/update/urn:li:activity:` are post permalinks — set the matching post's `permalink` to that URL (match by ordering and the reference's `text` snippet). Leave `permalink` empty when none is found.
 
 ## Dates
 

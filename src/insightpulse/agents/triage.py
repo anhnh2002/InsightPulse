@@ -34,7 +34,8 @@ class TriageToolKit(ToolKit, server_name="triage_reporter",
         description=(
             "Submit triage results as a JSON array, one element per input post: "
             '{"post_id": str, "kind": "paper"|"news"|"skip", "arxiv_url": str, '
-            '"github_url": str, "links": [str], "working_title": str, "reason": str}. '
+            '"github_url": str, "links": [str], "paper_name": str, '
+            '"working_title": str, "reason": str}. '
             "Call exactly once covering every post_id."
         ),
     )
@@ -65,7 +66,7 @@ class TriageToolKit(ToolKit, server_name="triage_reporter",
 
 
 def triage_posts(posts: list[dict], output_dir: Path, batch_label: str) -> list[TriageResult]:
-    """posts: [{"post_id", "kol", "source", "text", "urls"}] — one triage agent call."""
+    """posts: [{"post_id", "kol", "source", "text", "urls", "paper_name"}] — one triage agent call."""
     toolkit = TriageToolKit([p["post_id"] for p in posts])
     payload = json.dumps(posts, indent=2, ensure_ascii=False)
     run_agent(

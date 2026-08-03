@@ -57,7 +57,8 @@ def _title_tokens(s: str) -> set[str]:
     return {w.rstrip("s") for w in words if w not in _TITLE_STOPWORDS}
 
 
-def search_by_title(title: str, min_recall: float = 0.6) -> str:
+def search_by_title(title: str, min_recall: float = 0.6,
+                    ambiguity_margin: float = 0.15) -> str:
     """Best-effort arXiv id lookup by paper title; '' when no confident match.
 
     Social posts often name a paper without linking it, and triage working
@@ -95,7 +96,7 @@ def search_by_title(title: str, min_recall: float = 0.6) -> str:
     scored.sort(reverse=True)
     if not scored or scored[0][0] < min_recall:
         return ""
-    if len(scored) > 1 and scored[0][0] - scored[1][0] < 0.15:
+    if len(scored) > 1 and scored[0][0] - scored[1][0] < ambiguity_margin:
         log.info("arXiv title search: %r ambiguous (%.2f %s vs %.2f %s) — refusing",
                  title, scored[0][0], scored[0][1], scored[1][0], scored[1][1])
         return ""

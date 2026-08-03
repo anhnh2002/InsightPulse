@@ -153,18 +153,21 @@ def posts(
             links = _json.loads(r["links_json"])
             console.print(f"[bold]{r['id']}[/bold]  {r['source']}/{r['kol']}  "
                           f"posted {r['posted_at'] or '?'}")
+            if r["paper_name"]:
+                console.print(f"  paper: {r['paper_name']}")
             for u in links:
                 console.print(f"  link: {u}")
             console.print(r["post_text"])
             console.print("─" * 60)
         return
     table = Table(title=f"{status} items ({len(rows)})")
-    for col in ("id", "source", "kol", "posted", "links", "text"):
+    for col in ("id", "source", "kol", "posted", "paper", "links", "text"):
         table.add_column(col)
     for r in rows:
         n_links = len(_json.loads(r["links_json"]))
         table.add_row(r["id"], r["source"], r["kol"], r["posted_at"] or "?",
-                      str(n_links), r["post_text"][:70].replace("\n", " "))
+                      r["paper_name"][:30], str(n_links),
+                      r["post_text"][:70].replace("\n", " "))
     console.print(table)
 
 

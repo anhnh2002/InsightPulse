@@ -28,6 +28,7 @@ class RawPost(BaseModel):
     external_id: str = ""         # tweet id for X; empty for LinkedIn
     text: str
     urls: list[str] = Field(default_factory=list)
+    paper_name: str = ""          # verbatim paper title/short-name the post names
     author_name: str = ""
     created_at: str = ""          # ISO-ish string when known
     permalink: str = ""
@@ -47,6 +48,7 @@ class TriageResult(BaseModel):
     arxiv_url: str = ""
     github_url: str = ""
     links: list[str] = Field(default_factory=list)
+    paper_name: str = ""
     working_title: str = ""
     reason: str = ""
 

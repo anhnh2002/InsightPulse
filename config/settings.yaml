@@ -18,6 +18,10 @@ limits:
 topics:
   max_depth: 3
 
+# arxiv:                       # paper-name -> arXiv-id resolution thresholds
+#   title_min_recall: 0.6      # min token-overlap recall to accept a title match
+#   title_ambiguity_margin: 0.15  # refuse when top two candidates are this close
+
 review:
   auto_accept: false         # true: publish drafts immediately without review
                              # (override per run with --auto-accept / --no-auto-accept)

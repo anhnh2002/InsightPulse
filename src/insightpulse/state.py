@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS items (
     created_at  TEXT NOT NULL,
     error       TEXT DEFAULT '',
     links_json  TEXT DEFAULT '[]',
+    paper_name  TEXT DEFAULT '',
     title       TEXT DEFAULT '',
     post_text   TEXT DEFAULT '',
     posted_at   TEXT DEFAULT ''
@@ -46,6 +47,7 @@ CREATE TABLE IF NOT EXISTS runs (
 _MIGRATIONS = [
     ("items", "posted_at", "ALTER TABLE items ADD COLUMN posted_at TEXT DEFAULT ''"),
     ("runs", "target_date", "ALTER TABLE runs ADD COLUMN target_date TEXT DEFAULT ''"),
+    ("items", "paper_name", "ALTER TABLE items ADD COLUMN paper_name TEXT DEFAULT ''"),
 ]
 
 
@@ -113,8 +115,9 @@ class State:
         try:
             self.conn.execute(
                 "INSERT INTO items (id, source, kol, external_id, url, dedup_key,"
-                " status, run_id, created_at, links_json, post_text, posted_at)"
-                " VALUES (?, ?, ?, ?, ?, ?, 'collected', ?, ?, ?, ?, ?)",
+                " status, run_id, created_at, links_json, paper_name, post_text,"
+                " posted_at)"
+                " VALUES (?, ?, ?, ?, ?, ?, 'collected', ?, ?, ?, ?, ?, ?)",
                 (
                     item_id,
                     post.source.value,
@@ -125,6 +128,7 @@ class State:
                     run_id,
                     _now(),
                     json.dumps(post.urls),
+                    post.paper_name,
                     post.text,
                     post.created_at,
                 ),
@@ -135,25 +139,19 @@ class State:
         return item_id
 
     def set_triage(self, item_id: str, kind: Kind, links: list[str], title: str,
-                   arxiv_id: str = "") -> None:
+                   arxiv_id: str = "", paper_name: str = "") -> None:
         self.conn.execute(
             "UPDATE items SET kind = ?, status = ?, links_json = ?, title = ?,"
-            " arxiv_id = ? WHERE id = ?",
+            " arxiv_id = ?, paper_name = ? WHERE id = ?",
             (
                 kind.value,
                 "skipped" if kind == Kind.skip else "triaged",
                 json.dumps(links),
                 title,
                 arxiv_id,
+                paper_name,
                 item_id,
             ),
-        )
-        self.conn.commit()
-
-    def set_links(self, item_id: str, links: list[str]) -> None:
-        self.conn.execute(
-            "UPDATE items SET links_json = ? WHERE id = ?",
-            (json.dumps(links), item_id),
         )
         self.conn.commit()
 

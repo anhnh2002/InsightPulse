@@ -5,14 +5,12 @@ from __future__ import annotations
 import json
 import logging
 import os
-import re
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
 
 from insightpulse import queue as review_queue
-from insightpulse.agents.link_finder import find_missing_links
 from insightpulse.agents.linkedin_crawler import crawl_linkedin
 from insightpulse.agents.triage import arxiv_id_from_url, triage_posts
 from insightpulse.agents.writer import write_blog
@@ -29,7 +27,7 @@ from insightpulse.state import State, new_run_id
 
 log = logging.getLogger(__name__)
 
-SHORTENER_HOSTS = ("lnkd.in", "t.co", "buff.ly", "bit.ly", "tinyurl.com")
+SHORTENER_HOSTS = ("t.co", "buff.ly", "bit.ly", "tinyurl.com")
 
 
 class RunLocked(RuntimeError):
@@ -51,29 +49,16 @@ def _release_lock() -> None:
 
 
 _UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"}
-# lnkd.in serves an interstitial page instead of a redirect; the target is in
-# an anchor tagged external_url_click
-_INTERSTITIAL_RES = (
-    re.compile(r'data-tracking-control-name="external_url_click"[^>]*href="([^"]+)'),
-    re.compile(r'<a[^>]+href="(https?://(?!lnkd\.in|www\.linkedin\.com)[^"]+)"'),
-)
 
 
 def _resolve_short_links(urls: list[str]) -> list[str]:
-    """Follow shorteners (lnkd.in, t.co, ...) so triage sees the real targets."""
+    """Follow shorteners (t.co, ...) so triage sees the real targets."""
     resolved = []
     for u in urls:
         if any(h in u for h in SHORTENER_HOSTS):
             try:
                 resp = httpx.get(u, follow_redirects=True, timeout=15, headers=_UA)
-                final = str(resp.url)
-                if any(h in final for h in SHORTENER_HOSTS):
-                    for pat in _INTERSTITIAL_RES:
-                        m = pat.search(resp.text)
-                        if m:
-                            final = m.group(1)
-                            break
-                resolved.append(final)
+                resolved.append(str(resp.url))
                 continue
             except httpx.HTTPError:
                 pass
@@ -135,12 +120,6 @@ def collect_linkedin(state: State, run_id: str, run_dir: Path, start: date,
             new_items.append((item_id, p))
     log.info("LinkedIn crawl: %d posts in window %s..%s, %d new",
              len(posts), start, end, new)
-    # Paper links usually live in a comment the scraper can't see; a small
-    # agent per link-less post chases them down. Only new posts are worth
-    # the agents — links found for dupes would just be dropped by dedup.
-    if find_missing_links([p for _, p in new_items], run_dir / "logs"):
-        for item_id, p in new_items:
-            state.set_links(item_id, p.urls)
     if new_items:
         (RAW_DIR / run_id).mkdir(parents=True, exist_ok=True)
         (RAW_DIR / run_id / "collected_posts.json").write_text(json.dumps(
@@ -163,6 +142,7 @@ def triage_new(state: State, new_items: list[tuple[str, RawPost]],
                 "source": p.source.value,
                 "text": p.text[:4000],
                 "urls": _resolve_short_links(p.urls),
+                "paper_name": p.paper_name,
             }
             for item_id, p in batch
         ]
@@ -178,12 +158,28 @@ def triage_new(state: State, new_items: list[tuple[str, RawPost]],
             r = by_id.get(item_id)
             if r is None:
                 continue
+            paper_name = r.paper_name or p.paper_name
             arxiv_id = arxiv_id_from_url(r.arxiv_url) if r.arxiv_url else ""
+            if not arxiv_id and r.kind == Kind.paper:
+                # LinkedIn posts carry no links — resolve the paper by name.
+                for name in (paper_name, r.working_title):
+                    if name:
+                        arxiv_id = arxiv_enrich.search_by_title(
+                            name,
+                            min_recall=settings.arxiv.title_min_recall,
+                            ambiguity_margin=settings.arxiv.title_ambiguity_margin,
+                        )
+                    if arxiv_id:
+                        break
+                if arxiv_id:
+                    r.arxiv_url = f"https://arxiv.org/abs/{arxiv_id}"
             if arxiv_id and state.arxiv_seen(arxiv_id, exclude_item=item_id):
                 log.info("item %s: paper %s already covered, skipping", item_id, arxiv_id)
-                state.set_triage(item_id, Kind.skip, r.links, r.working_title, arxiv_id)
+                state.set_triage(item_id, Kind.skip, r.links, r.working_title,
+                                 arxiv_id, paper_name)
                 continue
-            state.set_triage(item_id, r.kind, r.links, r.working_title, arxiv_id)
+            state.set_triage(item_id, r.kind, r.links, r.working_title, arxiv_id,
+                             paper_name)
             if r.kind != Kind.skip:
                 triaged.append((item_id, p, r))
     return triaged
@@ -213,21 +209,11 @@ def process_item(state: State, item_id: str, post: RawPost, tri: TriageResult,
             "created_at": post.created_at,
         },
         "links": tri.links,
+        "paper_name": tri.paper_name,
         "working_title": tri.working_title,
     }
 
     arxiv_id = arxiv_id_from_url(tri.arxiv_url) if tri.arxiv_url else ""
-    if kind == Kind.paper and not arxiv_id and tri.working_title:
-        # LinkedIn posts often name a paper without a usable link — try to
-        # recover the arXiv id from the title before demoting to news.
-        arxiv_id = arxiv_enrich.search_by_title(tri.working_title)
-        if arxiv_id:
-            if state.arxiv_seen(arxiv_id, exclude_item=item_id):
-                log.info("item %s: title-matched paper %s already covered, skipping",
-                         item_id, arxiv_id)
-                state.set_triage(item_id, Kind.skip, tri.links, tri.working_title, arxiv_id)
-                return False
-            state.set_triage(item_id, kind, tri.links, tri.working_title, arxiv_id)
     if kind == Kind.paper and not arxiv_id:
         # Paper without a resolvable arXiv link: treat as news over the post text
         log.info("item %s: paper without arxiv link, writing as news", item_id)
@@ -267,8 +253,14 @@ def process_item(state: State, item_id: str, post: RawPost, tri: TriageResult,
     (workdir / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False))
     state.set_status(item_id, "enriched")
 
-    # date the draft by the post's own day; leftovers from earlier runs keep theirs
+    # papers are dated by their arXiv publication day; everything else by the
+    # post's own day (leftovers from earlier runs keep theirs)
     draft_date = parse_post_date(post.created_at, datetime.now(timezone.utc)) or fallback_date
+    if paper_meta and paper_meta.published:
+        try:
+            draft_date = date.fromisoformat(paper_meta.published)
+        except ValueError:
+            pass
     draft = write_blog(
         item_id=item_id,
         kind=kind,
@@ -299,6 +291,7 @@ def _row_to_post(row) -> RawPost:
         external_id=row["external_id"],
         text=row["post_text"],
         urls=json.loads(row["links_json"]),
+        paper_name=row["paper_name"],
         created_at=row["posted_at"],
         permalink=row["url"],
     )
@@ -329,6 +322,7 @@ def _leftover_items(state: State, exclude_ids: set[str]) -> list[tuple[str, RawP
                 arxiv_url=f"https://arxiv.org/abs/{row['arxiv_id']}" if row["arxiv_id"] else "",
                 github_url=next((u for u in links if "github.com" in u), ""),
                 links=links,
+                paper_name=row["paper_name"],
                 working_title=row["title"],
             )
             leftovers.append((row["id"], post, tri))

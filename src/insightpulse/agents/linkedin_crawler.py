@@ -151,7 +151,7 @@ class CrawlToolKit(ToolKit, server_name="linkedin_crawler",
         name="submit_posts",
         description=(
             "Submit ALL extracted posts across ALL KOLs as a JSON array. Each element: "
-            '{"kol": str (roster id), "author": str, "text": str, "links": [str], '
+            '{"kol": str (roster id), "author": str, "text": str, "paper_name": str, '
             '"permalink": str, "approx_date": "YYYY-MM-DD" or "", '
             '"date_precision": "day"|"week"|"month"|"unknown"}. '
             "Call exactly once when you are done crawling. An empty array is valid "
@@ -174,8 +174,8 @@ class CrawlToolKit(ToolKit, server_name="linkedin_crawler",
                 errors.append(f"post[{i}] 'kol' must be one of {sorted(self.allowed)}")
             if not str(p.get("text", "")).strip():
                 errors.append(f"post[{i}] missing non-empty 'text'")
-            if not isinstance(p.get("links", []), list):
-                errors.append(f"post[{i}] 'links' must be an array")
+            if not isinstance(p.get("paper_name", ""), str):
+                errors.append(f"post[{i}] 'paper_name' must be a string")
             if p.get("date_precision", "unknown") not in _PRECISIONS:
                 errors.append(f"post[{i}] 'date_precision' must be one of {_PRECISIONS}")
             approx = str(p.get("approx_date", "")).strip()
@@ -192,11 +192,8 @@ class CrawlToolKit(ToolKit, server_name="linkedin_crawler",
 
 
 def _to_raw_post(p: dict, profile_url: str) -> RawPost:
-    links = [u for u in p.get("links", []) if isinstance(u, str)]
     permalink = str(p.get("permalink", "")).strip()
-    m = _ACTIVITY_RE.search(permalink) or next(
-        (mm for mm in map(_ACTIVITY_RE.search, links) if mm), None
-    )
+    m = _ACTIVITY_RE.search(permalink)
     external_id = m.group(1) if m else ""
     if external_id:
         permalink = f"https://www.linkedin.com/feed/update/urn:li:activity:{external_id}/"
@@ -207,7 +204,7 @@ def _to_raw_post(p: dict, profile_url: str) -> RawPost:
         kol=p["kol"],
         external_id=external_id,
         text=p["text"],
-        urls=links,
+        paper_name=str(p.get("paper_name", "")).strip(),
         author_name=p.get("author", ""),
         created_at=str(p.get("approx_date", "")).strip(),
         permalink=permalink,

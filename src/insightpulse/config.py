@@ -43,6 +43,12 @@ class TopicSettings(BaseModel):
     max_depth: int = 3
 
 
+class ArxivSettings(BaseModel):
+    # name -> arXiv-id resolution thresholds (enrich.arxiv.search_by_title)
+    title_min_recall: float = 0.6
+    title_ambiguity_margin: float = 0.15
+
+
 class ReviewSettings(BaseModel):
     auto_accept: bool = False
 
@@ -52,6 +58,7 @@ class Settings(BaseModel):
     provider: str = "codex"
     limits: Limits = Field(default_factory=Limits)
     topics: TopicSettings = Field(default_factory=TopicSettings)
+    arxiv: ArxivSettings = Field(default_factory=ArxivSettings)
     review: ReviewSettings = Field(default_factory=ReviewSettings)
 
 
