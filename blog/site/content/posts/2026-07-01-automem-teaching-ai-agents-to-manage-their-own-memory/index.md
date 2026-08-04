@@ -56,7 +56,8 @@ paper:
 reliability:
   authors_orgs: Shengguang Wu, Hao Zhu, Yuhui Zhang, Xiaohan Wang, and Serena Yeung-Levy;
     affiliations are not stated in the supplied files.
-  code_available: false
+  code_available: true
+  code_url: https://autolearnmem.github.io/
   evidence: Three procedurally generated game benchmarks; staged scaffold and memory-proficiency
     results are reported.
   venue: arXiv:2607.01224 [cs.AI], submitted July 1, 2026.

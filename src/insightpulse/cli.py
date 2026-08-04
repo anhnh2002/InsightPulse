@@ -70,18 +70,32 @@ def run(
     dry_run: bool = typer.Option(False, help="collect + dedup only, no agents"),
     date: str = typer.Option(None, "--date",
                              help="target day YYYY-MM-DD (UTC); default: yesterday"),
+    days: int = typer.Option(None, "--days",
+                             help="crawl the last N days up to and including today "
+                                  "(UTC) instead of a single day; not combinable "
+                                  "with --date"),
     auto_accept: bool = typer.Option(
         None, "--auto-accept/--no-auto-accept",
         help="accept + publish drafts immediately, skipping review "
              "(default: review.auto_accept in settings.yaml)"),
 ):
-    """Run one pipeline pass over a single day: crawl → triage → enrich → write → queue."""
+    """Run one pipeline pass over a day window: crawl → triage → enrich → write → queue."""
     from insightpulse.pipeline import run_pipeline
 
-    target = _parse_day_opt(date, "--date") if date else None
+    if days is not None:
+        if date is not None:
+            raise typer.BadParameter("--days does not combine with --date")
+        if days < 1:
+            raise typer.BadParameter("--days must be >= 1")
+        from insightpulse.dates import today_utc
+
+        end = today_utc()
+        start = end - timedelta(days=days - 1)
+    else:
+        start = end = _parse_day_opt(date, "--date") if date else None
     counts = run_pipeline(sources=_parse_sources(source), kinds=_parse_kinds(kind),
-                          limit=limit, dry_run=dry_run, start_date=target,
-                          end_date=target, auto_accept=auto_accept)
+                          limit=limit, dry_run=dry_run, start_date=start,
+                          end_date=end, auto_accept=auto_accept)
     console.print(f"[bold]Run finished:[/bold] {counts}")
 
 

@@ -3,6 +3,11 @@
 {% block content %}
 <h1>Draft {{ draft_id }}</h1>
 {% if error %}<div class="error">{{ error }}</div>{% endif %}
+<form method="post" action="/admin/queue/{{ draft_id }}/code" class="row" style="margin:8px 0">
+  <input type="url" name="code_url" value="{{ code_url }}" style="flex:1"
+         placeholder="code repo URL, e.g. https://github.com/… — leave empty for “not released”">
+  <button class="primary" type="submit">Set code</button>
+</form>
 <form method="post" action="/admin/queue/{{ draft_id }}/save">
   <textarea name="content" style="min-height:480px">{{ content }}</textarea>
   <div class="row"><button class="primary" type="submit">Save</button></div>

@@ -12,3 +12,9 @@
   translation: "✓ Đã đọc"
 - id: bookmarks_empty
   translation: "Chưa có bài nào được lưu. Dùng nút ☆ trên bài viết để lưu lại đây."
+- id: view_toggle
+  translation: "Bố cục"
+- id: view_grid
+  translation: "Xem dạng lưới"
+- id: view_list
+  translation: "Xem dạng danh sách"

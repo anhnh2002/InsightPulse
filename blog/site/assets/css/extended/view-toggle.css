@@ -1,0 +1,97 @@
+/* Grid/list view toggle for post lists (home, sections, terms).
+   The preferred view is stamped as data-view on <html> before first paint
+   (see layouts/_partials/extend_head.html); grid is the default. Without JS
+   no data-view is set: the toggle stays hidden and the classic list renders. */
+
+.view-toggle {
+    display: none;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-bottom: calc(var(--gap) / 2);
+}
+
+html[data-view] .view-toggle {
+    display: flex;
+}
+
+.view-toggle .view-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--entry);
+    color: var(--secondary);
+    cursor: pointer;
+}
+
+.view-toggle .view-btn:hover {
+    color: var(--primary);
+}
+
+html[data-view="grid"] .view-toggle .view-btn-grid,
+html[data-view="list"] .view-toggle .view-btn-list {
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+/* Grid view: compact cards, two columns */
+html[data-view="grid"] .post-entries {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--gap);
+    align-items: stretch;
+    margin-bottom: var(--gap);
+}
+
+html[data-view="grid"] .post-entries .post-entry,
+html[data-view="grid"] .post-entries .first-entry {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: unset;
+    margin: 0;
+    padding: calc(var(--gap) * 0.75);
+}
+
+html[data-view="grid"] .post-entries .first-entry {
+    position: relative;
+    background: var(--entry);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+/* Cover becomes a full-bleed card thumbnail with a uniform aspect ratio */
+html[data-view="grid"] .post-entries .entry-cover {
+    margin: calc(var(--gap) * -0.75) calc(var(--gap) * -0.75) calc(var(--gap) * 0.6);
+}
+
+html[data-view="grid"] .post-entries .entry-cover img {
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    object-position: top;
+    border-radius: var(--radius) var(--radius) 0 0;
+}
+
+html[data-view="grid"] .post-entries .entry-header h2 {
+    font-size: 17px;
+    line-height: 1.35;
+}
+
+html[data-view="grid"] .post-entries .entry-content {
+    font-size: 13px;
+    -webkit-line-clamp: 3;
+}
+
+html[data-view="grid"] .post-entries .entry-footer {
+    margin-top: auto;
+    padding-top: 8px;
+    font-size: 12px;
+}
+
+@media (max-width: 600px) {
+    html[data-view="grid"] .post-entries {
+        grid-template-columns: 1fr;
+    }
+}

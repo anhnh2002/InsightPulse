@@ -109,13 +109,22 @@ def create_app() -> FastAPI:
     def queue_list(request: Request):
         return _render("queue_list.html", request, drafts=list_drafts("pending"))
 
+    def _draft_code_url(content: str) -> str:
+        try:
+            rel = frontmatter.loads(content).metadata.get("reliability") or {}
+        except Exception:
+            return ""
+        return str(rel.get("code_url") or "")
+
     @app.get("/admin/queue/{draft_id}", response_class=HTMLResponse, **guarded)
     def draft_edit(request: Request, draft_id: str, error: str = ""):
         path = _pending_draft_path(draft_id)
         if not path.is_file():
             return RedirectResponse("/admin/queue", status_code=303)
+        content = path.read_text()
         return _render("draft_edit.html", request, draft_id=draft_id,
-                       content=path.read_text(), error=error)
+                       content=content, error=error,
+                       code_url=_draft_code_url(content))
 
     @app.post("/admin/queue/{draft_id}/save", **guarded)
     def draft_save(request: Request, draft_id: str, content: str = Form(...)):
@@ -124,8 +133,21 @@ def create_app() -> FastAPI:
             frontmatter.loads(content)
         except Exception as exc:
             return _render("draft_edit.html", request, draft_id=draft_id,
-                           content=content, error=f"Not saved — bad frontmatter: {exc}")
+                           content=content, error=f"Not saved — bad frontmatter: {exc}",
+                           code_url=_draft_code_url(content))
         path.write_text(content)
+        return RedirectResponse(f"/admin/queue/{draft_id}", status_code=303)
+
+    @app.post("/admin/queue/{draft_id}/code", **guarded)
+    def draft_code(request: Request, draft_id: str, code_url: str = Form("")):
+        path = _pending_draft_path(draft_id)
+        if not path.is_file():
+            return RedirectResponse("/admin/queue", status_code=303)
+        url = code_url.strip()
+        if url and not url.startswith(("http://", "https://")):
+            return draft_edit(request, draft_id,
+                              error="Code URL must start with http(s)://")
+        posts.set_file_code(path, url)
         return RedirectResponse(f"/admin/queue/{draft_id}", status_code=303)
 
     @app.post("/admin/queue/{draft_id}/accept", **guarded)
@@ -137,8 +159,10 @@ def create_app() -> FastAPI:
             valid, err, _ = topics.validate_path(topic_override)
             if not valid:
                 path = _pending_draft_path(draft_id)
+                content = path.read_text()
                 return _render("draft_edit.html", request, draft_id=draft_id,
-                               content=path.read_text(), error=f"Topic invalid: {err}")
+                               content=content, error=f"Topic invalid: {err}",
+                               code_url=_draft_code_url(content))
         accept_draft(draft_id, topic_override=topic_override)
         _dirty["flag"] = True
         return RedirectResponse("/admin/queue", status_code=303)

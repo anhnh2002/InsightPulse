@@ -51,6 +51,7 @@ reliability:
   authors_orgs: Boyuan Zheng et al.; The Ohio State University, University of Virginia,
     Purdue University, Carnegie Mellon University, and Cisco Research.
   code_available: true
+  code_url: https://github.com/OSU-NLP-Group/SkillWeaver
   evidence: WebArena's 812-task benchmark plus 57 live-site tasks across 4 websites;
     cross-model and human-API comparisons, with documented failure cases.
   venue: arXiv:2504.07079 [cs.AI], submitted April 9, 2025.

@@ -6,8 +6,12 @@ import re
 from datetime import date, datetime, timedelta, timezone
 
 
+def today_utc() -> date:
+    return datetime.now(timezone.utc).date()
+
+
 def yesterday_utc() -> date:
-    return datetime.now(timezone.utc).date() - timedelta(days=1)
+    return today_utc() - timedelta(days=1)
 
 
 def parse_day(s: str) -> date:

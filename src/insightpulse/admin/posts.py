@@ -124,27 +124,31 @@ def set_bundle_topic(name: str, path: list[str]) -> None:
         f.write_bytes(frontmatter.dumps(post).encode())
 
 
-def set_bundle_code(name: str, url: str) -> None:
-    """Set or clear the code link in the reliability metadata (EN + VI).
+def set_file_code(f: Path, url: str) -> None:
+    """Set or clear the code link in one file's reliability metadata.
 
     A non-empty url marks code as available with a link; an empty url marks
     it as not released.
     """
+    post = frontmatter.load(f)
+    rel = post.metadata.setdefault("reliability", {})
+    rel["code_available"] = bool(url)
+    if url:
+        rel["code_url"] = url
+    else:
+        rel.pop("code_url", None)
+    f.write_bytes(frontmatter.dumps(post).encode())
+
+
+def set_bundle_code(name: str, url: str) -> None:
+    """Set or clear the code link in the reliability metadata (EN + VI)."""
     bundle = check_name(name)
     index = bundle / "index.md"
     if not index.is_file():
         raise FileNotFoundError(f"no published post {name}")
     for f in (index, bundle / "index.vi.md"):
-        if not f.is_file():
-            continue
-        post = frontmatter.load(f)
-        rel = post.metadata.setdefault("reliability", {})
-        rel["code_available"] = bool(url)
-        if url:
-            rel["code_url"] = url
-        else:
-            rel.pop("code_url", None)
-        f.write_bytes(frontmatter.dumps(post).encode())
+        if f.is_file():
+            set_file_code(f, url)
 
 
 def delete_bundle(name: str) -> None:

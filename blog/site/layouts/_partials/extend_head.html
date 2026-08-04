@@ -1,3 +1,11 @@
+{{- /* Grid/list view preference: applied before first paint to avoid layout flash. */ -}}
+<script>
+    (function () {
+        var v = 'grid';
+        try { v = localStorage.getItem('pref-view') || 'grid'; } catch (e) { }
+        document.documentElement.setAttribute('data-view', v === 'list' ? 'list' : 'grid');
+    })();
+</script>
 {{- /* Bookmarks / read-marks: per-language labels + vendored script (no CDN). */ -}}
 {{- $labels := dict
     "add" (i18n "bookmark_add")

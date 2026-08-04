@@ -6,7 +6,7 @@
 <p class="muted">No pending drafts.</p>
 {% else %}
 <table>
-  <tr><th>id</th><th>kind</th><th>title</th><th>topic</th><th>kol</th><th>vi</th></tr>
+  <tr><th>id</th><th>kind</th><th>title</th><th>topic</th><th>kol</th><th>vi</th><th></th></tr>
   {% for d in drafts %}
   <tr>
     <td><a href="/admin/queue/{{ d.metadata.id }}">{{ d.metadata.id }}</a></td>
@@ -15,6 +15,18 @@
     <td>{{ d.metadata.topic_path | join("/") }}{% if d.metadata.topic_proposed %} <em>*new</em>{% endif %}</td>
     <td>{{ d.metadata.kol }}</td>
     <td>{% if d.metadata.title_vi %}✓{% endif %}</td>
+    <td>
+      <div class="row" style="margin:0">
+        <form method="post" action="/admin/queue/{{ d.metadata.id }}/accept" style="margin:0"
+              onsubmit="return confirm('Accept & publish this draft?')">
+          <button class="primary" type="submit">Accept &amp; publish</button>
+        </form>
+        <form method="post" action="/admin/queue/{{ d.metadata.id }}/reject" style="margin:0"
+              onsubmit="return confirm('Reject this draft?')">
+          <button class="danger" type="submit">Reject</button>
+        </form>
+      </div>
+    </td>
   </tr>
   {% endfor %}
 </table>

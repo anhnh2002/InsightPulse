@@ -42,6 +42,7 @@ paper:
 reliability:
   authors_orgs: Bowen Peng, Subho Ghosh, and Jeffrey Quesnelle; Nous Research.
   code_available: true
+  code_url: https://github.com/ighoshsubho/lighthouse-attention
   evidence: 530M-parameter model on C4; 50.3B training tokens; three recovery schedules,
     latency scaling, design ablations, and a simplified retrieval test.
   venue: arXiv preprint 2605.06554, published May 7, 2026.

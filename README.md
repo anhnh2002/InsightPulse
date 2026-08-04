@@ -84,10 +84,10 @@ Notes:
 
 ## Scheduling (cron)
 
-Each run covers exactly one UTC day of posts — by default **yesterday**, so a daily cron always processes a complete day. Open your crontab with `crontab -e` and add an entry like:
+Each run covers a UTC day window of posts — by default just **yesterday** (a complete day). Pass `--days 2` to also sweep today-so-far, so fresh posts land the same day instead of waiting for tomorrow's run; dedup makes the overlap free. Open your crontab with `crontab -e` and add an entry like:
 
 ```cron
-0 8 * * * cd ~/InsightPulse && $HOME/.local/bin/uv run insightpulse run --source linkedin --kind paper >> data/cron.log 2>&1
+0 8 * * * cd ~/InsightPulse && $HOME/.local/bin/uv run insightpulse run --source linkedin --kind paper --days 2 >> data/cron.log 2>&1
 ```
 
 (This is a crontab line, not a shell command — the `0 8 * * *` prefix is the schedule, daily at 08:00. Use the absolute path to `uv` — `which uv` — because cron runs with a minimal `PATH`.)
