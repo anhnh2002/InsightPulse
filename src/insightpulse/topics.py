@@ -23,7 +23,7 @@ def load_tree() -> list[dict]:
 
 def save_tree(tree: list[dict]) -> None:
     header = (
-        "# Accepted hierarchical topic taxonomy (max depth 3).\n"
+        "# Accepted hierarchical topic taxonomy (max depth 10).\n"
         "# Writer agents may PROPOSE new nodes; they are merged here only when"
         " a draft is accepted.\n"
     )

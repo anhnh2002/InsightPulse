@@ -3,6 +3,26 @@
 {% block content %}
 <h1>Edit {{ post.name }}</h1>
 {% if error %}<div class="error">{{ error }}</div>{% endif %}
+{% if missing_link %}
+<div class="error">
+  ⚠ Paper link missing{% if paper_name %} — <em>{{ paper_name }}</em>{% endif %}.
+  <form method="post" action="/admin/posts/{{ post.name }}/link" class="row" style="margin:8px 0 0">
+    <input type="url" name="url" required style="flex:1"
+           placeholder="https://arxiv.org/abs/... (arXiv links get full metadata)">
+    <button class="primary" type="submit">Set link</button>
+  </form>
+</div>
+{% endif %}
+<form method="post" action="/admin/posts/{{ post.name }}/topic" class="row" style="margin:8px 0">
+  <input type="text" name="topic" value="{{ topic }}" required style="flex:1"
+         placeholder="topic path, e.g. ai/llm/agents">
+  <button class="primary" type="submit">Set topic</button>
+</form>
+<form method="post" action="/admin/posts/{{ post.name }}/code" class="row" style="margin:8px 0">
+  <input type="url" name="code_url" value="{{ code_url }}" style="flex:1"
+         placeholder="code repo URL, e.g. https://github.com/… — leave empty for “not released”">
+  <button class="primary" type="submit">Set code</button>
+</form>
 <form method="post" action="/admin/posts/{{ post.name }}/save">
   <h3>English (index.md)</h3>
   <textarea name="en">{{ post.en }}</textarea>

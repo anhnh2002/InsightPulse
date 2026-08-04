@@ -73,7 +73,10 @@ class BlogToolKit(ToolKit, server_name="blog_reporter",
             "keywords_json is a JSON array of 3-8 lowercase keyword strings. "
             "reliability_json is a JSON object with exactly these keys: "
             '{"authors_orgs": str, "venue": str, "code_available": bool, '
-            '"evidence": str} — short factual statements only, no judgments. '
+            '"code_url": str, "evidence": str} — short factual statements '
+            "only, no judgments. code_url is the official code/repo URL "
+            "exactly as it appears in the provided files, or \"\" when no "
+            "code is released. "
             "hero_figure is the workdir-relative path of the single best "
             "extracted figure to use as the post's cover image (e.g. "
             '"figures/fig01.png"), or "" when none is compelling. '

@@ -12,11 +12,12 @@ import httpx
 
 from insightpulse import queue as review_queue
 from insightpulse.agents.linkedin_crawler import crawl_linkedin
-from insightpulse.agents.triage import arxiv_id_from_url, triage_posts
+from insightpulse.agents.triage import triage_posts
 from insightpulse.agents.writer import write_blog
 from insightpulse.config import load_kols, load_settings
 from insightpulse.dates import parse_post_date, yesterday_utc
 from insightpulse.enrich import arxiv as arxiv_enrich
+from insightpulse.enrich.arxiv import arxiv_id_from_url
 from insightpulse.enrich import figures as figures_enrich
 from insightpulse.enrich import github as github_enrich
 from insightpulse.models import Kind, RawPost, Source, TriageResult
@@ -35,13 +36,21 @@ class RunLocked(RuntimeError):
 
 
 def _acquire_lock() -> None:
-    if RUN_LOCK.exists():
-        pid = RUN_LOCK.read_text().strip()
+    # O_EXCL makes create-if-absent atomic: two concurrent runs cannot both
+    # pass an exists() check and clobber each other's lock.
+    try:
+        fd = os.open(RUN_LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        try:
+            pid = RUN_LOCK.read_text().strip() or "unknown"
+        except OSError:
+            pid = "unknown"
         raise RunLocked(
             f"another run appears to be in progress (pid {pid}); "
             f"remove {RUN_LOCK} if it is stale"
-        )
-    RUN_LOCK.write_text(str(os.getpid()))
+        ) from None
+    with os.fdopen(fd, "w") as f:
+        f.write(str(os.getpid()))
 
 
 def _release_lock() -> None:
@@ -180,6 +189,13 @@ def triage_new(state: State, new_items: list[tuple[str, RawPost]],
                 continue
             state.set_triage(item_id, r.kind, r.links, r.working_title, arxiv_id,
                              paper_name)
+            if r.kind == Kind.paper and not arxiv_id:
+                # Unresolvable paper: park it for a manual link fill in the
+                # admin (/admin/links) instead of spending a writer call.
+                log.info("item %s: paper %r has no arXiv link — needs manual fill",
+                         item_id, paper_name or r.working_title)
+                state.set_status(item_id, "needs_link")
+                continue
             if r.kind != Kind.skip:
                 triaged.append((item_id, p, r))
     return triaged
@@ -196,28 +212,30 @@ def process_item(state: State, item_id: str, post: RawPost, tri: TriageResult,
     workdir.mkdir(parents=True, exist_ok=True)
 
     kind = tri.kind
+    arxiv_id = arxiv_id_from_url(tri.arxiv_url) if tri.arxiv_url else ""
+    if kind == Kind.paper and not arxiv_id:
+        # Safety net — triage should have parked these already.
+        log.info("item %s: paper without arxiv link, parking as needs_link", item_id)
+        state.set_status(item_id, "needs_link")
+        return False
     paper_meta = None
     repo_meta = None
     meta: dict = {
         "kind": kind.value,
-        "social_post": {
+        "links": tri.links,
+        "paper_name": tri.paper_name,
+        "working_title": tri.working_title,
+    }
+    # manually added items have no social post — don't fabricate an empty one
+    if post.text or post.permalink:
+        meta["social_post"] = {
             "source": post.source.value,
             "kol": post.kol,
             "author": post.author_name,
             "text": post.text,
             "permalink": post.permalink,
             "created_at": post.created_at,
-        },
-        "links": tri.links,
-        "paper_name": tri.paper_name,
-        "working_title": tri.working_title,
-    }
-
-    arxiv_id = arxiv_id_from_url(tri.arxiv_url) if tri.arxiv_url else ""
-    if kind == Kind.paper and not arxiv_id:
-        # Paper without a resolvable arXiv link: treat as news over the post text
-        log.info("item %s: paper without arxiv link, writing as news", item_id)
-        kind = Kind.news
+        }
 
     if kind == Kind.paper:
         paper_meta = arxiv_enrich.fetch_meta(arxiv_id)
@@ -277,7 +295,7 @@ def process_item(state: State, item_id: str, post: RawPost, tri: TriageResult,
             "text": post.text[:500],
             "author": post.author_name or post.kol,
             "created_at": post.created_at,
-        },
+        } if (post.text or post.permalink) else None,
     )
     review_queue.write_draft(draft, workdir=workdir)
     state.set_status(item_id, "drafted")
@@ -314,6 +332,12 @@ def _leftover_items(state: State, exclude_ids: set[str]) -> list[tuple[str, RawP
         for row in state.items_by_status(status):
             if row["id"] in exclude_ids or not row["kind"]:
                 continue
+            if row["kind"] == Kind.paper.value and not row["arxiv_id"]:
+                # Pre-needs_link rows: park them for a manual link fill.
+                log.info("item %s: paper %r has no arXiv link — needs manual fill",
+                         row["id"], row["paper_name"] or row["title"])
+                state.set_status(row["id"], "needs_link")
+                continue
             post = _row_to_post(row)
             links = json.loads(row["links_json"])
             tri = TriageResult(
@@ -339,7 +363,10 @@ def run_pipeline(sources: set[Source] | None = None, limit: int | None = None,
     # sources=set() is meaningful: process already-collected items, crawl nothing
     sources = set(Source) if sources is None else sources
     kinds = kinds or {Kind.paper, Kind.news}
-    limit = limit if limit is not None else settings.limits.items_per_run
+    if limit is None:
+        # A backfill is one deliberate catch-up pass: write everything that is
+        # ready instead of draining items_per_run per run.
+        limit = 10 ** 9 if backfill else settings.limits.items_per_run
     auto_accept = auto_accept if auto_accept is not None else settings.review.auto_accept
     end_date = end_date or yesterday_utc()
     start_date = start_date or end_date

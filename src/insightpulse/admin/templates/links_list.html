@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Missing links — InsightPulse Admin{% endblock %}
+{% block content %}
+<h1>Missing paper links</h1>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+{% if msg %}<div class="banner"><span>{{ msg }}</span></div>{% endif %}
+{% if running %}
+<div class="banner"><span>⏳ A pipeline run is in progress — filled items are being
+written. Refresh this page to see it drain.</span></div>
+{% endif %}
+{% if not items %}
+<p class="muted">No papers waiting for a link.</p>
+{% else %}
+<p class="muted">{{ items|length }} paper post{{ "s" if items|length != 1 else "" }}
+could not be resolved to an arXiv link automatically. Find the paper and paste its
+arXiv URL — filled items are written on the next pipeline run, or immediately via
+<em>Write now</em>. Skip posts you never want written.</p>
+<form method="post" action="/admin/links/process" class="row">
+  <button class="primary" type="submit" {% if running %}disabled{% endif %}>Write now</button>
+  <span class="muted" style="font-size:13px">runs the writer on everything already
+  filled (log: data/admin_process.log)</span>
+</form>
+{% for it in items %}
+<div class="card" style="margin:12px 0">
+  <div><strong>{{ it.paper_name or it.title or "(unnamed paper)" }}</strong></div>
+  <div class="muted" style="font-size:13px">
+    {{ it.id }} · {{ it.source }}/{{ it.kol }} · posted {{ it.posted_at or "?" }}
+    {% if it.url %} · <a href="{{ it.url }}" target="_blank" rel="noopener">original post ↗</a>{% endif %}
+  </div>
+  <p class="muted" style="font-size:13px">{{ it.post_text[:280] }}{% if it.post_text|length > 280 %}…{% endif %}</p>
+  <div class="row" style="margin:0">
+    <form method="post" action="/admin/links/{{ it.id }}" class="row" style="flex:1; margin:0">
+      <input type="url" name="url" required style="flex:1"
+             placeholder="https://arxiv.org/abs/…">
+      <button class="primary" type="submit">Set link</button>
+    </form>
+    <form method="post" action="/admin/links/{{ it.id }}/skip" style="margin:0">
+      <button class="danger" type="submit" title="never write this item">Skip</button>
+    </form>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

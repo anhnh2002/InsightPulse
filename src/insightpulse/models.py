@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 class Source(str, Enum):
     x = "x"
     linkedin = "linkedin"
+    manual = "manual"             # added by hand in the admin; no social post
 
 
 class Kind(str, Enum):

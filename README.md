@@ -1,6 +1,6 @@
 # InsightPulse
 
-Semi-autonomous pipeline that watches AI/ML thought leaders (KOLs) on **X** and **LinkedIn**, has AI agents write opinionated blog drafts about the papers and news they share, queues the drafts for **your** review, and publishes accepted posts to a self-hosted blog.
+Semi-autonomous pipeline that surfaces noteworthy AI papers and news (discovered via what AI/ML researchers share on **X** and **LinkedIn**), has AI agents write big-picture summaries of each paper's core idea, queues the drafts for **your** review, and publishes accepted posts to a self-hosted blog — keep up with AI without spending hours reading every paper.
 
 ```
 X / LinkedIn ──crawl+extract──▶ dedup ──▶ triage ──▶ enrich ──▶ write ──▶ review queue ──accept──▶ blog
@@ -37,8 +37,9 @@ uv run insightpulse posts                   # inspect the raw crawled posts (--f
 uv run insightpulse process                 # triage + write what was collected, no re-crawl
 uv run insightpulse run --auto-accept       # publish drafts immediately, no review
 
-uv run insightpulse backfill --days 7                        # last 7 complete days
-uv run insightpulse backfill --source linkedin --kind paper --auto-accept
+uv run insightpulse backfill --days 7          # last 7 complete days; writes ALL
+                                               # ready items (no per-run cap)
+uv run insightpulse backfill --source linkedin --kind paper --auto-accept --days 30
 uv run insightpulse backfill --from 2026-07-20 --to 2026-07-25
 
 uv run insightpulse list                    # pending drafts
@@ -68,6 +69,8 @@ docker compose up -d --force-recreate web   # once after pulling this feature, t
 
 From there: edit/accept/reject pending drafts, add/edit/delete published posts, and rebuild the site with one button (mutations show a "site out of date" banner instead of rebuilding on every change).
 
+Papers whose link couldn't be resolved automatically (no arXiv URL in the post, title search came up empty) are **not** written — they park in a **Missing links** list (`/admin/links`, status `needs_link`) so no writer budget is spent on them. Find the paper and paste its arXiv URL there (non-arXiv URLs are rejected; Skip posts you never want written). Filled items are written by the next pipeline run, or immediately via the page's **Write now** button, which runs `insightpulse process --kind paper` in the background (log: `data/admin_process.log`). Published posts that still lack a link (from before this flow) keep a ⚠ badge and a fill form on their edit page; filling one updates both languages — hit Rebuild afterwards.
+
 Notes:
 - The server binds `0.0.0.0:8082` so the nginx container can reach it via `host.docker.internal` — on a LAN, the admin port is reachable from other machines (password-protected; put a firewall rule on 8082 if that matters).
 - CSRF is mitigated by the `SameSite=Lax` session cookie; if you ever expose the admin beyond your LAN, add per-session CSRF tokens and TLS first.
@@ -81,11 +84,13 @@ Notes:
 
 ## Scheduling (cron)
 
-Each run covers exactly one UTC day of posts — by default **yesterday**, so a daily cron always processes a complete day:
+Each run covers exactly one UTC day of posts — by default **yesterday**, so a daily cron always processes a complete day. Open your crontab with `crontab -e` and add an entry like:
 
 ```cron
-0 8 * * * cd ~/InsightPulse && uv run insightpulse run >> data/cron.log 2>&1
+0 8 * * * cd ~/InsightPulse && $HOME/.local/bin/uv run insightpulse run --source linkedin --kind paper >> data/cron.log 2>&1
 ```
+
+(This is a crontab line, not a shell command — the `0 8 * * *` prefix is the schedule, daily at 08:00. Use the absolute path to `uv` — `which uv` — because cron runs with a minimal `PATH`.)
 
 Runs are idempotent: the day window plus cross-run dedup means re-running a day collects nothing new and only retries previously failed items. If cron missed some days, catch up with `insightpulse backfill --days N` (or `--from`/`--to`) — it runs the pipeline **once over the whole window**: X is fetched per day (date-scoped search), while LinkedIn is crawled in a single agent-driven pass that scrolls each KOL deep enough to cover the window. LinkedIn only exposes relative post ages ("3d", "2 tuần"), so window matching is precision-tolerant ("2w" → ±3 days); beyond ~a month coverage becomes unreliable.
 

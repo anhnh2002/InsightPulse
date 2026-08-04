@@ -170,6 +170,22 @@ class State:
         ).fetchone()
         return row is not None
 
+    def resolve_link(self, item_id: str, arxiv_id: str) -> None:
+        """Manually filled arXiv id: the item leaves needs_link and becomes
+        writable again (picked up as a leftover by the next run)."""
+        self.conn.execute(
+            "UPDATE items SET arxiv_id = ?, status = 'triaged' WHERE id = ?",
+            (arxiv_id, item_id),
+        )
+        self.conn.commit()
+
+    def set_arxiv(self, item_id: str, arxiv_id: str) -> None:
+        """Record a manually resolved arXiv id without touching the status."""
+        self.conn.execute(
+            "UPDATE items SET arxiv_id = ? WHERE id = ?", (arxiv_id, item_id)
+        )
+        self.conn.commit()
+
     def set_status(self, item_id: str, status: str, error: str = "") -> None:
         self.conn.execute(
             "UPDATE items SET status = ?, error = ? WHERE id = ?",

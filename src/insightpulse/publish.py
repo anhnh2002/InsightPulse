@@ -70,6 +70,11 @@ def publish_draft(draft_path: Path) -> Path:
     for key in ("paper", "repo", "reliability", "social"):
         if m.get(key):
             hugo_meta[key] = m[key]
+    if m.get("source") == "linkedin":
+        # LinkedIn crawls only yield profile URLs, not post permalinks — don't
+        # surface original-post provenance on the published page
+        hugo_meta["source_url"] = ""
+        hugo_meta.pop("social", None)
 
     bundle_name = f"{m.get('date', '')}-{_slugify(str(m.get('title', '')))}"
 

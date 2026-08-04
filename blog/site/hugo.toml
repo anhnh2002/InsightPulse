@@ -9,7 +9,7 @@ tag = "tags"
 topic = "topics"
 
 [params]
-description = "AI-assisted digests of papers and news shared by ML thought leaders"
+description = "The big ideas from noteworthy AI papers — keep up without hours of reading"
 images = ["images/og-default.png"]
 defaultTheme = "auto"
 displayFullLangName = true
@@ -37,7 +37,7 @@ weight = 1
 
 [languages.en.params.homeInfoParams]
 Title = "InsightPulse"
-Content = "Curated, opinionated blog posts about papers and news surfaced from KOLs on X and LinkedIn"
+Content = "The big ideas from noteworthy AI papers — keep up with the field without spending hours reading every paper"
 
 [[languages.en.menus.main]]
 name = "Posts"
@@ -66,7 +66,7 @@ weight = 2
 
 [languages.vi.params.homeInfoParams]
 Title = "InsightPulse"
-Content = "Bài viết chọn lọc về các bài báo khoa học và tin tức AI từ các KOL trên X và LinkedIn"
+Content = "Tóm tắt ý tưởng chính của những bài báo AI đáng chú ý — cập nhật kiến thức mà không mất hàng giờ đọc trọn từng paper"
 
 [[languages.vi.menus.main]]
 name = "Bài viết"

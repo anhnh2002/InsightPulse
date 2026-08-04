@@ -16,7 +16,7 @@ limits:
   news_text_chars: 20000     # cap for fetched news page text
 
 topics:
-  max_depth: 3
+  max_depth: 10
 
 # arxiv:                       # paper-name -> arXiv-id resolution thresholds
 #   title_min_recall: 0.6      # min token-overlap recall to accept a title match

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 from pathlib import Path
 
 from caw import ToolKit, tool
@@ -14,13 +13,6 @@ from insightpulse.config import load_settings
 from insightpulse.models import Kind, TriageResult
 
 log = logging.getLogger(__name__)
-
-ARXIV_ID_RE = re.compile(r"arxiv\.org/(?:abs|pdf|html)/(\d{4}\.\d{4,5})(?:v\d+)?")
-
-
-def arxiv_id_from_url(url: str) -> str:
-    m = ARXIV_ID_RE.search(url)
-    return m.group(1) if m else ""
 
 
 class TriageToolKit(ToolKit, server_name="triage_reporter",

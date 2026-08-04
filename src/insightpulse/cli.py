@@ -34,13 +34,14 @@ def _parse_day_opt(value: str, opt: str) -> date:
 def _parse_sources(value: str) -> set:
     from insightpulse.models import Source
 
+    crawlable = {Source.x, Source.linkedin}
     if value.strip().lower() == "all":
-        return set(Source)
+        return crawlable
     try:
         sources = {Source(v.strip().lower()) for v in value.split(",") if v.strip()}
     except ValueError:
         sources = set()
-    if not sources:
+    if not sources or not sources <= crawlable:
         raise typer.BadParameter("source must be all or a comma-separated mix of x, linkedin")
     return sources
 

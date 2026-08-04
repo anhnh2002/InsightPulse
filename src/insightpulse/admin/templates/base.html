@@ -22,7 +22,7 @@ button.danger { border-color: #dc2626; color: #dc2626; }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #8883; font-size: 14px; }
 textarea { width: 100%; min-height: 320px; font-family: ui-monospace, monospace; font-size: 13px; padding: 10px; border: 1px solid #8886; border-radius: 6px; background: transparent; color: inherit; }
-input[type=text], input[type=password] { padding: 8px 10px; border: 1px solid #8886; border-radius: 6px; background: transparent; color: inherit; font-size: 14px; }
+input[type=text], input[type=password], input[type=url] { padding: 8px 10px; border: 1px solid #8886; border-radius: 6px; background: transparent; color: inherit; font-size: 14px; }
 .row { display: flex; gap: 8px; align-items: center; margin: 12px 0; flex-wrap: wrap; }
 .muted { opacity: .65; }
 h1 { font-size: 22px; }
@@ -35,6 +35,8 @@ h1 { font-size: 22px; }
 <nav>
   <span class="brand"><a href="/admin/">InsightPulse Admin</a></span>
   <a href="/admin/queue">Queue</a>
+  <a href="/admin/links">Missing links</a>
+  <a href="/admin/papers/new">Add paper</a>
   <a href="/admin/posts">Posts</a>
   <a href="/" target="_blank" rel="noopener">View site ↗</a>
   <form method="post" action="/admin/logout"><button>Logout</button></form>

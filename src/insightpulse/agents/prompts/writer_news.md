@@ -19,11 +19,11 @@ Context and implications — for practitioners AND for people who just use these
 Only truly rare, specialized terms you could not avoid — ones even a tech-curious reader would have to look up. Bulleted list: `**term** — one plain-language sentence.` Do NOT define anything in general circulation: LLM, AI agent, chatbot, GPU, open source, prompt, benchmark, fine-tuning, token, and the like. Most posts need 0–2 entries; if nothing qualifies, still include the header with a single line: "No jargon needed this time."
 
 ## Links
-Bulleted: the announcement/page, GitHub repo, the original social post.
+Bulleted: the announcement/page, GitHub repo. Include the original social post only for X items — LinkedIn items carry a profile URL, not a post link; omit it.
 
 Storytelling devices — use them, don't decorate with them:
 - You may pull ONE striking sentence or claim into a standalone blockquote as a pull-quote.
-- You may place the original social post into the narrative by putting this shortcode on its own line where it fits the story: `{{< source-post >}}`
+- For X items only, you may place the original social post into the narrative by putting this shortcode on its own line where it fits the story: `{{< source-post >}}`. Never use it for LinkedIn items.
 - Use a markdown table when comparing things with numbers; use a mermaid diagram (fenced code block with language `mermaid`) only when a flow genuinely helps.
 
 Vietnamese version (the blog is bilingual):
@@ -35,9 +35,9 @@ Vietnamese version (the blog is bilingual):
 Other requirements:
 - Title: informative and inviting to a general reader, not clickbait, ≤ 90 chars.
 - `summary`: 1–2 sentences, used as the post's meta description — jargon-free.
-- Topic classification: call `get_topic_tree` first, pick the most specific existing path that fits. Only propose a new node (as a child of an existing node, max depth 3) when nothing existing fits; reuse paths marked as already-proposed when appropriate.
+- Topic classification: call `get_topic_tree` first, pick the most specific existing path that fits. Only propose a new node (as a child of an existing node, max depth 10) when nothing existing fits; reuse paths marked as already-proposed when appropriate.
 - Keywords: 3–8 flat, lowercase, specific.
-- `reliability_json`: exactly `{"authors_orgs": str, "venue": str, "code_available": bool, "evidence": str}` — short factual statements (who is behind it; where it was published/announced; whether code is public; one line on evidence of substance, e.g. "repo at 4k stars, MIT, active"). Facts only — it is rendered as metadata; do NOT editorialize and do NOT write a Reliability section in the body.
+- `reliability_json`: exactly `{"authors_orgs": str, "venue": str, "code_available": bool, "code_url": str, "evidence": str}` — short factual statements (who is behind it; where it was published/announced; whether code is public; one line on evidence of substance, e.g. "repo at 4k stars, MIT, active"). For `code_available`/`code_url`: look for an official code/repo link in content.txt and meta.json (for repo items, use the repo URL from meta.json); set `code_url` to that URL exactly as written and `code_available` to true. Only set `code_available` to false with `code_url` as `""` when you found no such link. Never invent or guess a URL. Facts only — it is rendered as metadata; do NOT editorialize and do NOT write a Reliability section in the body.
 - Do not fabricate facts or links; if something is unknown, say so.
 
 When ready, call `submit_blog`. If it returns validation errors, fix them and call it again.

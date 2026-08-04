@@ -1,4 +1,4 @@
-# Accepted hierarchical topic taxonomy (max depth 3).
+# Accepted hierarchical topic taxonomy (max depth 10).
 # Writer agents may PROPOSE new nodes; they are merged here only when a draft is accepted.
 topics:
 - slug: ai

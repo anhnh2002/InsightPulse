@@ -17,6 +17,13 @@ API_URL = "http://export.arxiv.org/api/query"
 
 _HEADERS = {"User-Agent": "InsightPulse/0.1 (research blog pipeline)"}
 
+ARXIV_ID_RE = re.compile(r"arxiv\.org/(?:abs|pdf|html)/(\d{4}\.\d{4,5})(?:v\d+)?")
+
+
+def arxiv_id_from_url(url: str) -> str:
+    m = ARXIV_ID_RE.search(url)
+    return m.group(1) if m else ""
+
 
 def fetch_meta(arxiv_id: str) -> PaperMeta:
     resp = httpx.get(

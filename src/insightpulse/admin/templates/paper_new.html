@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Add paper — InsightPulse Admin{% endblock %}
+{% block content %}
+<h1>Add paper</h1>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+{% if msg %}<div class="banner"><span>{{ msg }}</span></div>{% endif %}
+{% if running %}
+<div class="banner"><span>⏳ A pipeline run is in progress — queued papers are being
+written. Refresh this page to see the list drain.</span></div>
+{% endif %}
+<p class="muted">Paste an arXiv URL. Title, abstract, full text and figures are
+fetched automatically; the blog post is written on the next pipeline run (or via
+<em>Write now</em>) and lands in the review queue.</p>
+<form method="post" action="/admin/papers/new" class="row">
+  <input type="url" name="url" required style="flex:1"
+         placeholder="https://arxiv.org/abs/…">
+  <button class="primary" type="submit">Add paper</button>
+</form>
+<form method="post" action="/admin/links/process" class="row">
+  <button class="primary" type="submit" {% if running %}disabled{% endif %}>Write now</button>
+  <span class="muted" style="font-size:13px">runs the writer on every queued paper
+  (log: data/admin_process.log)</span>
+</form>
+{% if queued %}
+<h3>Waiting to be written</h3>
+{% for it in queued %}
+<div class="card" style="margin:12px 0">
+  <div><strong>{{ it.paper_name or it.title or "(unnamed paper)" }}</strong></div>
+  <div class="muted" style="font-size:13px">
+    {{ it.id }} · arXiv {{ it.arxiv_id }} · {{ it.status }} · added {{ it.created_at }}
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

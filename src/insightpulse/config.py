@@ -40,7 +40,7 @@ class Limits(BaseModel):
 
 
 class TopicSettings(BaseModel):
-    max_depth: int = 3
+    max_depth: int = 10
 
 
 class ArxivSettings(BaseModel):
